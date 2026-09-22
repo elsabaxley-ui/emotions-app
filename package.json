@@ -1,0 +1,13 @@
+{
+  "name": "hourly",
+  "private": true,
+  "description": "Log how you feel every hour. A phone-first web app that installs to your home screen.",
+  "scripts": {
+    "test": "node tools/test.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}

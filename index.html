@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hourly</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hourly">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Log how you feel every hour. Everything stays on your phone.">
+<style>
+/* ---------- tokens ---------- */
+:root {
+  color-scheme: light;
+  --plane:          #f9f9f7;
+  --surface:        #fcfcfb;
+  --ink:            #0b0b0b;
+  --ink-2:          #52514e;
+  --muted:          #898781;
+  --grid:           #e1e0d9;
+  --axis:           #c3c2b7;
+  --border:         rgba(11,11,11,0.10);
+  --wash:           rgba(11,11,11,0.04);
+  --series-1:       #2a78d6;
+  --series-1-wash:  rgba(42,120,214,0.10);
+  /* diverging mood scale: red arm <- neutral -> blue arm */
+  --mood-1:         #c93a39;
+  --mood-2:         #ec9998;
+  --mood-3:         #f0efec;
+  --mood-4:         #86b6ef;
+  --mood-5:         #2a78d6;
+  --mood-1-ink:     #ffffff;
+  --mood-2-ink:     #0b0b0b;
+  --mood-3-ink:     #0b0b0b;
+  --mood-4-ink:     #0b0b0b;
+  --mood-5-ink:     #ffffff;
+  --radius:         14px;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --plane:          #0d0d0d;
+    --surface:        #1a1a19;
+    --ink:            #ffffff;
+    --ink-2:          #c3c2b7;
+    --muted:          #898781;
+    --grid:           #2c2c2a;
+    --axis:           #383835;
+    --border:         rgba(255,255,255,0.10);
+    --wash:           rgba(255,255,255,0.05);
+    --series-1:       #3987e5;
+    --series-1-wash:  rgba(57,135,229,0.12);
+    --mood-1:         #e66767;
+    --mood-2:         #b83b3a;
+    --mood-3:         #383835;
+    --mood-4:         #1c5cab;
+    --mood-5:         #5598e7;
+    --mood-1-ink:     #0b0b0b;
+    --mood-2-ink:     #ffffff;
+    --mood-3-ink:     #ffffff;
+    --mood-4-ink:     #ffffff;
+    --mood-5-ink:     #0b0b0b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:          #0d0d0d;
+  --surface:        #1a1a19;
+  --ink:            #ffffff;
+  --ink-2:          #c3c2b7;
+  --muted:          #898781;
+  --grid:           #2c2c2a;
+  --axis:           #383835;
+  --border:         rgba(255,255,255,0.10);
+  --wash:           rgba(255,255,255,0.05);
+  --series-1:       #3987e5;
+  --series-1-wash:  rgba(57,135,229,0.12);
+  --mood-1:         #e66767;
+  --mood-2:         #b83b3a;
+  --mood-3:         #383835;
+  --mood-4:         #1c5cab;
+  --mood-5:         #5598e7;
+  --mood-1-ink:     #0b0b0b;
+  --mood-2-ink:     #ffffff;
+  --mood-3-ink:     #ffffff;
+  --mood-4-ink:     #ffffff;
+  --mood-5-ink:     #0b0b0b;
+}
+
+/* ---------- shell ---------- */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.45;
+  min-height: 100vh;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  overflow-x: hidden;
+}
+main { max-width: 640px; margin: 0 auto; padding: 16px 16px 8px; }
+h1 { font-size: 1.0rem; font-weight: 600; margin: 0; letter-spacing: 0.01em; }
+h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 2px; }
+h3 { font-size: 0.86rem; font-weight: 600; margin: 0; color: var(--ink-2); }
+p  { margin: 0; }
+button { font-family: inherit; font-size: inherit; color: inherit; cursor: pointer; }
+
+header.top {
+  max-width: 640px; margin: 0 auto;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 2px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+header.top .clock { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.icon-btn {
+  background: none; border: 1px solid var(--border); border-radius: 9px;
+  width: 34px; height: 34px; display: grid; place-items: center; padding: 0;
+  color: var(--ink-2);
+}
+.icon-btn:hover { background: var(--wash); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card.pad-tight { padding: 14px 14px 10px; }
+.hint { font-size: 0.82rem; color: var(--muted); }
+.row { display: flex; align-items: center; gap: 10px; }
+.between { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.stack { display: grid; gap: 12px; }
+
+/* ---------- check-in ---------- */
+.slotline { font-size: 0.82rem; color: var(--muted); margin-bottom: 10px; }
+.moods { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 4px 0 2px; }
+.mood {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px 2px 8px; display: grid; gap: 3px; justify-items: center;
+  transition: transform 0.07s ease;
+}
+.mood:active { transform: scale(0.96); }
+.mood .face { font-size: 1.45rem; line-height: 1.1; }
+.mood .lbl { font-size: 0.66rem; color: var(--muted); letter-spacing: 0.01em; }
+.mood[aria-pressed="true"] { border-color: transparent; }
+.mood[aria-pressed="true"] .lbl { color: inherit; opacity: 0.85; }
+.mood[data-m="1"][aria-pressed="true"] { background: var(--mood-1); color: var(--mood-1-ink); }
+.mood[data-m="2"][aria-pressed="true"] { background: var(--mood-2); color: var(--mood-2-ink); }
+.mood[data-m="3"][aria-pressed="true"] { background: var(--mood-3); color: var(--mood-3-ink); border-color: var(--border); }
+.mood[data-m="4"][aria-pressed="true"] { background: var(--mood-4); color: var(--mood-4-ink); }
+.mood[data-m="5"][aria-pressed="true"] { background: var(--mood-5); color: var(--mood-5-ink); }
+
+.grouplbl { font-size: 0.68rem; color: var(--muted); text-transform: lowercase; letter-spacing: 0.04em; margin: 10px 0 5px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  background: none; border: 1px solid var(--border); border-radius: 999px;
+  padding: 6px 11px; font-size: 0.86rem; color: var(--ink-2); line-height: 1.2;
+}
+.chip:hover { background: var(--wash); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--plane); border-color: var(--ink); }
+textarea {
+  width: 100%; margin-top: 10px; padding: 10px; font-family: inherit; font-size: 0.92rem;
+  background: var(--plane); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 10px; resize: vertical; min-height: 60px;
+}
+.btn {
+  width: 100%; padding: 13px; margin-top: 12px; border: 1px solid transparent; border-radius: 11px;
+  background: var(--ink); color: var(--plane); font-weight: 600; font-size: 0.98rem;
+}
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn.ghost { background: none; color: var(--ink-2); border-color: var(--border); font-weight: 500; }
+.btn.ghost:hover { background: var(--wash); }
+.btn.slim { padding: 9px; margin-top: 8px; font-size: 0.88rem; }
+.linkish {
+  background: none; border: none; padding: 0; margin-top: 6px;
+  font-size: 0.84rem; color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px;
+  /* a thumb needs something to hit, even when it looks like a text link */
+  min-height: 34px; display: inline-flex; align-items: center;
+}
+
+/* ---------- meter ---------- */
+.meter { height: 8px; border-radius: 999px; background: var(--grid); overflow: hidden; margin-top: 8px; }
+.meter > i { display: block; height: 100%; background: var(--series-1); border-radius: 999px; }
+
+/* ---------- timeline ---------- */
+.tl { list-style: none; margin: 0; padding: 0; }
+.tl li { display: grid; grid-template-columns: 62px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--grid); align-items: start; }
+.tl li:first-child { border-top: none; }
+.tl .when { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 3px; }
+.tl .body { display: flex; gap: 9px; align-items: flex-start; }
+.dot { width: 15px; height: 15px; border-radius: 50%; flex: none; margin-top: 3px; border: 1px solid var(--border); }
+.dot.empty { background: none; border: 1px dashed var(--axis); }
+.tl .what { font-size: 0.92rem; }
+.tl .note { font-size: 0.85rem; color: var(--ink-2); margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+.tl .fill {
+  background: none; border: none; padding: 0; font-size: 0.88rem; color: var(--muted);
+  text-decoration: underline; text-underline-offset: 2px;
+  min-height: 30px; display: inline-flex; align-items: center;
+}
+.tag { font-size: 0.68rem; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 0 4px; margin-left: 6px; vertical-align: 1px; }
+
+/* ---------- stats ---------- */
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+.tile .k { font-size: 0.72rem; color: var(--muted); }
+.tile .v { font-size: 1.5rem; font-weight: 600; margin-top: 1px; }
+.tile .s { font-size: 0.72rem; color: var(--ink-2); }
+
+/* ---------- charts ---------- */
+.chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.viz { position: relative; }
+.viz svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.viz text { font-family: var(--sans); }
+.tick { font-size: 10px; fill: var(--muted); }
+.vlabel { font-size: 10px; fill: var(--ink-2); font-weight: 600; }
+.tip {
+  position: absolute; pointer-events: none; opacity: 0; transition: opacity 0.1s;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 9px; padding: 6px 9px; font-size: 0.78rem; line-height: 1.35;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12); white-space: nowrap; z-index: 5;
+  transform: translate(-50%, -100%);
+}
+.tip.on { opacity: 1; }
+.tip b { font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; font-size: 0.74rem; color: var(--ink-2); align-items: center; }
+.legend .sw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid var(--border); }
+.legend .item { display: flex; align-items: center; }
+.numbtn {
+  background: none; border: 1px solid var(--border); border-radius: 8px;
+  padding: 0 11px; min-height: 32px; font-size: 0.74rem; color: var(--ink-2);
+  display: inline-flex; align-items: center; white-space: nowrap;
+}
+.numbtn:hover { background: var(--wash); }
+table.data { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8rem; }
+table.data th, table.data td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+table.data th { color: var(--muted); font-weight: 600; }
+.empty { font-size: 0.86rem; color: var(--muted); padding: 18px 0 6px; }
+
+/* ---------- nav ---------- */
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  background: color-mix(in srgb, var(--plane) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+}
+nav.tabs .inner { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+nav.tabs button {
+  background: none; border: none; border-radius: 10px; padding: 7px 4px 5px;
+  display: grid; gap: 2px; justify-items: center; color: var(--muted); font-size: 0.67rem;
+}
+nav.tabs button svg { width: 21px; height: 21px; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); }
+nav.tabs button .badge {
+  position: absolute; transform: translate(11px, -3px);
+  width: 7px; height: 7px; border-radius: 50%; background: var(--series-1);
+}
+.tabwrap { position: relative; }
+[hidden] { display: none !important; }
+.sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--grid); }
+.settings-row:first-of-type { border-top: none; }
+.settings-row .lab { font-size: 0.9rem; }
+.settings-row .sub { font-size: 0.76rem; color: var(--muted); margin-top: 1px; }
+select {
+  font-family: inherit; font-size: 0.88rem; padding: 6px 8px; border-radius: 8px;
+  background: var(--plane); color: var(--ink); border: 1px solid var(--border);
+}
+.danger { color: #c93a39; }
+:root[data-theme="dark"] .danger, :root:not([data-theme="light"]) .danger { color: #e66767; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .danger { color: #c93a39; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Hourly</h1>
+  <div class="row">
+    <span class="clock" id="clock"></span>
+    <button class="icon-btn" id="themeBtn" title="Switch theme" aria-label="Switch theme">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ NOW ============ -->
+  <section id="view-now">
+    <div class="card" id="checkinCard"></div>
+    <div class="card pad-tight" id="catchupCard" hidden></div>
+    <div class="card pad-tight" id="progressCard"></div>
+  </section>
+
+  <!-- ============ TODAY ============ -->
+  <section id="view-today" hidden>
+    <div class="card">
+      <div class="between" style="margin-bottom:6px">
+        <h2 id="dayTitle">Today</h2>
+        <div class="row" style="gap:4px">
+          <button class="icon-btn" id="dayPrev" aria-label="Previous day">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+          </button>
+          <button class="icon-btn" id="dayNext" aria-label="Next day">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="hint" id="daySummary"></p>
+      <ul class="tl" id="timeline"></ul>
+    </div>
+  </section>
+
+  <!-- ============ PATTERNS ============ -->
+  <section id="view-patterns" hidden>
+    <div class="tiles" style="margin-bottom:12px">
+      <div class="tile"><div class="k">Today</div><div class="v" id="tToday">–</div><div class="s" id="tTodaySub">no logs yet</div></div>
+      <div class="tile"><div class="k">7-day average</div><div class="v" id="tWeek">–</div><div class="s" id="tWeekSub">&nbsp;</div></div>
+      <div class="tile"><div class="k">Day streak</div><div class="v" id="tStreak">0</div><div class="s" id="tStreakSub">&nbsp;</div></div>
+    </div>
+
+    <div class="card">
+      <div class="chart-head">
+        <div><h3>Mood by time of day</h3><p class="hint" id="hourSub">average of every hour you've logged</p></div>
+        <button class="numbtn" data-numbers="hourTable" aria-expanded="false">Numbers</button>
+      </div>
+      <div class="viz" id="hourViz"></div>
+      <div id="hourTable" hidden></div>
+    </div>
+
+    <div class="card">
+      <div class="chart-head">
+        <div><h3>The last 7 days</h3><p class="hint">each square is one hour</p></div>
+        <button class="numbtn" data-numbers="heatTable" aria-expanded="false">Numbers</button>
+      </div>
+      <div class="viz" id="heatViz"></div>
+      <div class="legend" id="heatLegend"></div>
+      <div id="heatTable" hidden></div>
+    </div>
+
+    <div class="card">
+      <div class="chart-head">
+        <div><h3>What you feel most</h3><p class="hint" id="emoSub">times logged, all time</p></div>
+        <button class="numbtn" data-numbers="emoTable" aria-expanded="false">Numbers</button>
+      </div>
+      <div class="viz" id="emoViz"></div>
+      <div id="emoTable" hidden></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:4px">Settings</h3>
+      <div class="settings-row">
+        <div><div class="lab">Hours you want to be asked</div><div class="sub" id="windowSub"></div></div>
+        <div class="row" style="gap:4px">
+          <select id="dayStart" aria-label="First hour"></select>
+          <span class="hint">to</span>
+          <select id="dayEnd" aria-label="Last hour"></select>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="lab">Notify me on the hour</div><div class="sub" id="notifySub">only works while the app is open</div></div>
+        <button class="numbtn" id="notifyBtn">Turn on</button>
+      </div>
+      <div class="settings-row">
+        <div><div class="lab">Your data</div><div class="sub">stays on this device — nothing is uploaded</div></div>
+        <div class="row" style="gap:6px">
+          <button class="numbtn" id="exportJson">JSON</button>
+          <button class="numbtn" id="exportCsv">CSV</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="lab danger">Erase everything</div><div class="sub">every entry, permanently</div></div>
+        <button class="numbtn danger" id="wipeBtn">Erase</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <div class="inner" role="tablist">
+    <button role="tab" data-tab="now" aria-selected="true" class="tabwrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+      <span>Now</span><span class="badge" id="navBadge" hidden></span>
+    </button>
+    <button role="tab" data-tab="today" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/></svg>
+      <span>Today</span>
+    </button>
+    <button role="tab" data-tab="patterns" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.5l4.5-5 4 3L20 6"/><path d="M4 20.5h16"/></svg>
+      <span>Patterns</span>
+    </button>
+  </div>
+</nav>
+
+<div class="sr" role="status" aria-live="polite" id="live"></div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   data
+   ============================================================ */
+const KEY = 'hourly.v1';
+const MOOD_WORDS = { 1: 'awful', 2: 'low', 3: 'okay', 4: 'good', 5: 'great' };
+const FACES = { 1: '\u{1F616}', 2: '\u{1F615}', 3: '\u{1F610}', 4: '\u{1F642}', 5: '\u{1F604}' };
+
+const EMOTIONS = [
+  { group: 'good', items: ['happy', 'calm', 'excited', 'proud', 'grateful', 'loved', 'focused'] },
+  { group: 'in between', items: ['tired', 'bored', 'meh', 'restless', 'surprised'] },
+  { group: 'hard', items: ['anxious', 'stressed', 'sad', 'angry', 'lonely', 'overwhelmed', 'embarrassed'] },
+];
+const ALL_EMOTIONS = EMOTIONS.flatMap(g => g.items);
+
+const DEFAULTS = { dayStart: 8, dayEnd: 22, notify: false };
+
+let store = load();
+
+function load() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
+  let parsed = {};
+  if (raw) { try { parsed = JSON.parse(raw) || {}; } catch (e) { parsed = {}; } }
+  return {
+    entries: (parsed.entries && typeof parsed.entries === 'object') ? parsed.entries : {},
+    settings: Object.assign({}, DEFAULTS, parsed.settings || {}),
+  };
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(store)); }
+  catch (e) { say("Couldn't save — this browser is blocking storage."); }
+}
+
+/* ============================================================
+   time helpers — slots are local-hour keys: "2026-09-21T14"
+   ============================================================ */
+const pad = n => String(n).padStart(2, '0');
+const slotKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}`;
+const dayKey = d => slotKey(d).slice(0, 10);
+function slotDate(key) {
+  const [y, m, rest] = key.split('-');
+  const [d, h] = rest.split('T');
+  return new Date(+y, +m - 1, +d, +h);
+}
+function hourLabel(h) {
+  const ap = h < 12 ? 'am' : 'pm';
+  const t = h % 12 === 0 ? 12 : h % 12;
+  return `${t}${ap}`;
+}
+function hourLabelLong(h) {
+  const ap = h < 12 ? 'AM' : 'PM';
+  const t = h % 12 === 0 ? 12 : h % 12;
+  return `${t}:00 ${ap}`;
+}
+const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const monNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+const sameDay = (a, b) => dayKey(a) === dayKey(b);
+
+function inWindow(h) {
+  const { dayStart, dayEnd } = store.settings;
+  return h >= dayStart && h <= dayEnd;
+}
+/** Every slot key for a date that sits inside the waking window and is not in the future. */
+function slotsForDay(date) {
+  const now = new Date();
+  const out = [];
+  for (let h = store.settings.dayStart; h <= store.settings.dayEnd; h++) {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate(), h);
+    if (d > now) break;
+    out.push(slotKey(d));
+  }
+  return out;
+}
+/** Unlogged in-window slots from the last 12 hours, oldest first, excluding the current hour. */
+function missedSlots() {
+  const now = new Date();
+  const out = [];
+  for (let back = 12; back >= 1; back--) {
+    const d = new Date(now.getTime() - back * 3600e3);
+    d.setMinutes(0, 0, 0);
+    if (!inWindow(d.getHours())) continue;
+    const k = slotKey(d);
+    if (!store.entries[k]) out.push(k);
+  }
+  return out;
+}
+
+/* ============================================================
+   view state
+   ============================================================ */
+let tab = 'now';
+let editing = null;                 // slot key being logged
+let draft = { mood: null, emotions: [], note: '' };
+let noteOpen = false;
+let viewDay = startOfDay(new Date());
+
+const $ = sel => document.querySelector(sel);
+const el = (tag, attrs, kids) => {
+  const n = document.createElement(tag);
+  for (const k in (attrs || {})) {
+    if (k === 'class') n.className = attrs[k];
+    else if (k === 'text') n.textContent = attrs[k];
+    else if (k === 'html') n.innerHTML = attrs[k];
+    else if (attrs[k] !== null && attrs[k] !== false) n.setAttribute(k, attrs[k]);
+  }
+  (kids || []).forEach(c => n.appendChild(c));
+  return n;
+};
+function say(msg) { $('#live').textContent = msg; }
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function beginEdit(key) {
+  editing = key;
+  const e = store.entries[key];
+  draft = e
+    ? { mood: e.mood, emotions: (e.emotions || []).slice(), note: e.note || '' }
+    : { mood: null, emotions: [], note: '' };
+  noteOpen = !!draft.note;
+}
+
+/* ============================================================
+   NOW — the check-in
+   ============================================================ */
+function renderNow() {
+  const now = new Date();
+  const cur = slotKey(now);
+  if (editing === null) editing = cur;
+
+  const card = $('#checkinCard');
+  card.innerHTML = '';
+  const isCurrent = editing === cur;
+  const existing = store.entries[editing];
+  const d = slotDate(editing);
+
+  if (existing && isCurrent && !card.dataset.reopen) {
+    // already logged this hour — show it back, offer the next step
+    const next = new Date(now.getTime() + 3600e3); next.setMinutes(0, 0, 0);
+    card.appendChild(el('p', { class: 'slotline', text: `${hourLabelLong(d.getHours())} — logged` }));
+    card.appendChild(el('h2', { text: `${FACES[existing.mood]}  ${MOOD_WORDS[existing.mood]}` }));
+    if (existing.emotions && existing.emotions.length)
+      card.appendChild(el('p', { class: 'hint', style: 'margin-top:2px', text: existing.emotions.join(' · ') }));
+    if (existing.note)
+      card.appendChild(el('p', { class: 'note', style: 'margin-top:8px;font-size:0.88rem', text: existing.note }));
+    const wait = inWindow(next.getHours())
+      ? `Next check-in ${hourLabel(next.getHours())} — in ${countdownText()}`
+      : `That's your last one today. See you ${hourLabel(store.settings.dayStart)} tomorrow.`;
+    card.appendChild(el('p', { class: 'hint', style: 'margin-top:12px', text: wait }));
+    const again = el('button', { class: 'btn ghost slim', text: 'Change it' });
+    again.onclick = () => { card.dataset.reopen = '1'; beginEdit(cur); renderNow(); };
+    card.appendChild(again);
+    return;
+  }
+
+  // the picker
+  const when = isCurrent
+    ? `${hourLabelLong(d.getHours())} — right now`
+    : `${sameDay(d, now) ? 'Today' : dayNames[d.getDay()]} at ${hourLabelLong(d.getHours())}`;
+  card.appendChild(el('p', { class: 'slotline', text: when }));
+  card.appendChild(el('h2', { text: isCurrent ? 'How are you?' : 'How were you?' }));
+
+  const moods = el('div', { class: 'moods' });
+  for (let m = 1; m <= 5; m++) {
+    const b = el('button', { class: 'mood', 'data-m': m, 'aria-pressed': String(draft.mood === m), 'aria-label': MOOD_WORDS[m] }, [
+      el('span', { class: 'face', text: FACES[m], 'aria-hidden': 'true' }),
+      el('span', { class: 'lbl', text: MOOD_WORDS[m] }),
+    ]);
+    b.onclick = () => { draft.mood = m; renderNow(); };
+    moods.appendChild(b);
+  }
+  card.appendChild(moods);
+
+  EMOTIONS.forEach(g => {
+    card.appendChild(el('p', { class: 'grouplbl', text: g.group }));
+    const wrap = el('div', { class: 'chips' });
+    g.items.forEach(name => {
+      const on = draft.emotions.includes(name);
+      const c = el('button', { class: 'chip', 'aria-pressed': String(on), text: name });
+      c.onclick = () => {
+        const i = draft.emotions.indexOf(name);
+        if (i < 0) draft.emotions.push(name); else draft.emotions.splice(i, 1);
+        c.setAttribute('aria-pressed', String(i < 0));
+      };
+      wrap.appendChild(c);
+    });
+    card.appendChild(wrap);
+  });
+
+  if (noteOpen) {
+    const ta = el('textarea', { placeholder: "What's going on? (optional)", maxlength: '500' });
+    ta.value = draft.note;
+    ta.oninput = () => { draft.note = ta.value; };
+    card.appendChild(ta);
+  } else {
+    const add = el('button', { class: 'linkish', text: '+ add a note' });
+    add.onclick = () => { noteOpen = true; renderNow(); card.querySelector('textarea').focus(); };
+    card.appendChild(add);
+  }
+
+  const submit = el('button', { class: 'btn', text: store.entries[editing] ? 'Save changes' : 'Log it' });
+  submit.disabled = draft.mood === null;
+  submit.onclick = commit;
+  card.appendChild(submit);
+
+  if (!isCurrent) {
+    const cancel = el('button', { class: 'btn ghost slim', text: 'Back to now' });
+    cancel.onclick = () => { beginEdit(slotKey(new Date())); delete card.dataset.reopen; renderNow(); };
+    card.appendChild(cancel);
+  }
+}
+
+function commit() {
+  if (draft.mood === null) return;
+  const cur = slotKey(new Date());
+  store.entries[editing] = {
+    mood: draft.mood,
+    emotions: draft.emotions.slice(),
+    note: draft.note.trim(),
+    at: Date.now(),
+    late: editing !== cur,
+  };
+  save();
+  say(`Logged ${MOOD_WORDS[draft.mood]} for ${hourLabelLong(slotDate(editing).getHours())}.`);
+  delete $('#checkinCard').dataset.reopen;
+  beginEdit(cur);
+  renderAll();
+}
+
+function countdownText() {
+  const now = new Date();
+  const mins = 60 - now.getMinutes();
+  if (mins <= 1) return 'under a minute';
+  return `${mins} min`;
+}
+
+function renderCatchup() {
+  const card = $('#catchupCard');
+  const missed = missedSlots();
+  const badge = $('#navBadge');
+  card.innerHTML = '';
+  if (!missed.length) {
+    card.hidden = true;
+    badge.hidden = !!store.entries[slotKey(new Date())] || !inWindow(new Date().getHours());
+    return;
+  }
+  card.hidden = false;
+  badge.hidden = false;
+  card.appendChild(el('h3', { text: missed.length === 1 ? 'You missed an hour' : `You missed ${missed.length} hours` }));
+  card.appendChild(el('p', {
+    class: 'hint', style: 'margin:2px 0 9px',
+    text: missed.length > 8
+      ? 'The most recent 8 are here \u2014 fill one in if you remember how you were.'
+      : 'Fill one in if you remember how you were.',
+  }));
+  const wrap = el('div', { class: 'chips' });
+  missed.slice(-8).forEach(k => {
+    const h = slotDate(k).getHours();
+    const b = el('button', { class: 'chip', text: hourLabel(h) });
+    b.onclick = () => {
+      beginEdit(k);
+      delete $('#checkinCard').dataset.reopen;
+      setTab('now');
+      renderNow();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    wrap.appendChild(b);
+  });
+  card.appendChild(wrap);
+}
+
+function renderProgress() {
+  const card = $('#progressCard');
+  const today = slotsForDay(new Date());
+  const done = today.filter(k => store.entries[k]).length;
+  const pct = today.length ? Math.round((done / today.length) * 100) : 0;
+  card.innerHTML = '';
+  card.appendChild(el('div', { class: 'between' }, [
+    el('h3', { text: 'Today' }),
+    el('span', { class: 'hint', text: `${done} of ${today.length} hours` }),
+  ]));
+  const meter = el('div', { class: 'meter', role: 'img', 'aria-label': `${done} of ${today.length} hours logged today` });
+  meter.appendChild(el('i', { style: `width:${pct}%` }));
+  card.appendChild(meter);
+  const avg = average(today.map(k => store.entries[k] && store.entries[k].mood).filter(Boolean));
+  card.appendChild(el('p', {
+    class: 'hint', style: 'margin-top:8px',
+    text: avg === null
+      ? 'Nothing logged yet today.'
+      : `Averaging ${avg.toFixed(1)} — ${MOOD_WORDS[Math.round(avg)]}.`,
+  }));
+}
+
+/* ============================================================
+   TODAY — the timeline
+   ============================================================ */
+function renderToday() {
+  const now = new Date();
+  const isToday = sameDay(viewDay, now);
+  $('#dayTitle').textContent = isToday
+    ? 'Today'
+    : `${dayNames[viewDay.getDay()]}, ${monNames[viewDay.getMonth()]} ${viewDay.getDate()}`;
+  $('#dayNext').disabled = isToday;
+  $('#dayNext').style.opacity = isToday ? 0.35 : 1;
+
+  const list = $('#timeline');
+  list.innerHTML = '';
+  const hours = [];
+  for (let h = store.settings.dayStart; h <= store.settings.dayEnd; h++) {
+    const d = new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h);
+    if (d > now) break;
+    hours.push(h);
+  }
+
+  const logged = hours.filter(h => store.entries[slotKey(new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h))]);
+  const avg = average(logged.map(h => store.entries[slotKey(new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h))].mood));
+  $('#daySummary').textContent = !hours.length
+    ? 'This day is outside the hours you asked about.'
+    : avg === null
+      ? 'Nothing logged this day.'
+      : `${logged.length} of ${hours.length} hours · averaging ${avg.toFixed(1)}`;
+
+  hours.forEach(h => {
+    const k = slotKey(new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h));
+    const e = store.entries[k];
+    const li = el('li');
+    li.appendChild(el('span', { class: 'when', text: hourLabel(h) }));
+    const body = el('div', { class: 'body' });
+    if (e) {
+      body.appendChild(el('span', { class: 'dot', style: `background:var(--mood-${e.mood})`, 'aria-hidden': 'true' }));
+      const txt = el('div');
+      const line = el('div', { class: 'what' });
+      line.appendChild(el('span', { text: MOOD_WORDS[e.mood] }));
+      if (e.emotions && e.emotions.length)
+        line.appendChild(el('span', { class: 'hint', text: ' — ' + e.emotions.join(', ') }));
+      if (e.late) line.appendChild(el('span', { class: 'tag', text: 'filled in later' }));
+      txt.appendChild(line);
+      if (e.note) txt.appendChild(el('div', { class: 'note', text: e.note }));
+      const edit = el('button', { class: 'fill', style: 'margin-top:3px', text: 'edit' });
+      edit.onclick = () => { beginEdit(k); delete $('#checkinCard').dataset.reopen; setTab('now'); renderNow(); window.scrollTo({ top: 0 }); };
+      txt.appendChild(edit);
+      body.appendChild(txt);
+    } else {
+      body.appendChild(el('span', { class: 'dot empty', 'aria-hidden': 'true' }));
+      const b = el('button', { class: 'fill', text: 'not logged — fill in' });
+      b.onclick = () => { beginEdit(k); delete $('#checkinCard').dataset.reopen; setTab('now'); renderNow(); window.scrollTo({ top: 0 }); };
+      body.appendChild(b);
+    }
+    li.appendChild(body);
+    list.appendChild(li);
+  });
+
+  if (!hours.length) list.appendChild(el('li', { class: 'empty', text: 'No hours to show.' }));
+}
+
+/* ============================================================
+   stats
+   ============================================================ */
+function average(nums) {
+  const a = nums.filter(n => typeof n === 'number');
+  return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+}
+function entriesInLastDays(n) {
+  const cutoff = addDays(startOfDay(new Date()), -(n - 1));
+  return Object.keys(store.entries)
+    .filter(k => slotDate(k) >= cutoff)
+    .map(k => ({ key: k, date: slotDate(k), ...store.entries[k] }));
+}
+function streakDays() {
+  const days = new Set(Object.keys(store.entries).map(k => k.slice(0, 10)));
+  if (!days.size) return 0;
+  let cursor = startOfDay(new Date());
+  if (!days.has(dayKey(cursor))) {
+    cursor = addDays(cursor, -1);
+    if (!days.has(dayKey(cursor))) return 0;
+  }
+  let n = 0;
+  while (days.has(dayKey(cursor))) { n++; cursor = addDays(cursor, -1); }
+  return n;
+}
+
+function renderTiles() {
+  const todayAvg = average(slotsForDay(new Date()).map(k => store.entries[k] && store.entries[k].mood));
+  const week = entriesInLastDays(7);
+  const weekAvg = average(week.map(e => e.mood));
+
+  $('#tToday').textContent = todayAvg === null ? '–' : todayAvg.toFixed(1);
+  $('#tTodaySub').textContent = todayAvg === null ? 'no logs yet' : MOOD_WORDS[Math.round(todayAvg)];
+  $('#tWeek').textContent = weekAvg === null ? '–' : weekAvg.toFixed(1);
+  $('#tWeekSub').textContent = weekAvg === null ? 'no logs yet'
+    : (todayAvg === null ? `${week.length} logs`
+      : (Math.abs(todayAvg - weekAvg) < 0.05 ? 'today is typical'
+        : `today is ${Math.abs(todayAvg - weekAvg).toFixed(1)} ${todayAvg > weekAvg ? 'above' : 'below'}`));
+  const st = streakDays();
+  $('#tStreak').textContent = st;
+  $('#tStreakSub').textContent = st === 0 ? 'start today' : st === 1 ? 'day' : 'days in a row';
+}
+
+/* ============================================================
+   charts — one shared tooltip helper
+   ============================================================ */
+function tipLayer(host) {
+  const t = el('div', { class: 'tip' });
+  host.appendChild(t);
+  return {
+    show(x, y, html) { t.innerHTML = html; t.style.left = x + 'px'; t.style.top = (y - 8) + 'px'; t.classList.add('on'); },
+    hide() { t.classList.remove('on'); },
+  };
+}
+/**
+ * Wire a chart's pointer handling. A finger leaves the element the instant it
+ * lifts, so `pointerleave` would erase the tooltip before it could be read —
+ * only a mouse dismisses that way. A touch tooltip stays until the next tap
+ * somewhere else (see the global dismiss handler in boot).
+ */
+function wireTip(svg, onPoint, onLeave) {
+  svg.addEventListener('pointermove', onPoint);
+  svg.addEventListener('pointerdown', onPoint);
+  svg.addEventListener('pointerleave', ev => { if (ev.pointerType !== 'touch') onLeave(); });
+  svg._onLeave = onLeave;
+}
+function svgNS(tag, attrs) {
+  const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, attrs[k]);
+  return n;
+}
+function emptyState(host, msg) {
+  host.innerHTML = '';
+  host.appendChild(el('p', { class: 'empty', text: msg }));
+}
+
+/* ---- A. mood by hour of day (single-series line) ---- */
+function renderHourChart() {
+  const host = $('#hourViz');
+  const { dayStart, dayEnd } = store.settings;
+  const buckets = {};
+  Object.keys(store.entries).forEach(k => {
+    const h = slotDate(k).getHours();
+    if (!inWindow(h)) return;
+    (buckets[h] = buckets[h] || []).push(store.entries[k].mood);
+  });
+  const hours = [];
+  for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
+  const pts = hours.map(h => ({ h, n: (buckets[h] || []).length, avg: average(buckets[h] || []) }));
+  const have = pts.filter(p => p.avg !== null);
+  if (have.length < 2) {
+    emptyState(host, have.length ? 'One hour logged. Log a couple more and the shape of your day shows up here.' : 'Nothing logged yet — this fills in as you check in.');
+    $('#hourTable').hidden = true;
+    return;
+  }
+
+  const W = 640, H = 220, ml = 30, mr = 14, mt = 14, mb = 26;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const x = i => ml + (hours.length === 1 ? iw / 2 : (i / (hours.length - 1)) * iw);
+  const y = v => mt + ih - ((v - 1) / 4) * ih;
+
+  host.innerHTML = '';
+  const svg = svgNS('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Average mood by hour of day' });
+
+  // gridlines + y ticks
+  [1, 2, 3, 4, 5].forEach(v => {
+    svg.appendChild(svgNS('line', { x1: ml, x2: W - mr, y1: y(v), y2: y(v), stroke: 'var(--grid)', 'stroke-width': 1 }));
+  });
+  [[1, 'awful'], [3, 'okay'], [5, 'great']].forEach(([v, lab]) => {
+    const t = svgNS('text', { x: ml - 6, y: y(v) + 3.5, 'text-anchor': 'end', class: 'tick' });
+    t.textContent = lab; svg.appendChild(t);
+  });
+  // x ticks — every third hour, plus the last
+  hours.forEach((h, i) => {
+    if (i % 3 !== 0 && i !== hours.length - 1) return;
+    const t = svgNS('text', { x: x(i), y: H - 8, 'text-anchor': 'middle', class: 'tick' });
+    t.textContent = hourLabel(h); svg.appendChild(t);
+  });
+  svg.appendChild(svgNS('line', { x1: ml, x2: W - mr, y1: mt + ih, y2: mt + ih, stroke: 'var(--axis)', 'stroke-width': 1 }));
+
+  // Connect across one unlogged hour — an 11am you never happen to catch
+  // shouldn't punch a hole in the shape of your day — but break across any
+  // longer gap rather than draw a line through hours there's no evidence for.
+  const runs = [];
+  let run = [];
+  pts.forEach((p, i) => {
+    if (p.avg === null) return;
+    if (run.length && i - run[run.length - 1].i > 2) { runs.push(run); run = []; }
+    run.push({ ...p, i });
+  });
+  if (run.length) runs.push(run);
+
+  runs.forEach(r => {
+    if (r.length > 1) {
+      const d = r.map((p, j) => `${j ? 'L' : 'M'}${x(p.i).toFixed(1)} ${y(p.avg).toFixed(1)}`).join(' ');
+      const area = `M${x(r[0].i).toFixed(1)} ${(mt + ih).toFixed(1)} ` +
+        r.map(p => `L${x(p.i).toFixed(1)} ${y(p.avg).toFixed(1)}`).join(' ') +
+        ` L${x(r[r.length - 1].i).toFixed(1)} ${(mt + ih).toFixed(1)} Z`;
+      svg.appendChild(svgNS('path', { d: area, fill: 'var(--series-1-wash)', stroke: 'none' }));
+      svg.appendChild(svgNS('path', { d, fill: 'none', stroke: 'var(--series-1)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    }
+    r.forEach(p => {
+      svg.appendChild(svgNS('circle', { cx: x(p.i), cy: y(p.avg), r: 4, fill: 'var(--series-1)', stroke: 'var(--surface)', 'stroke-width': 2 }));
+    });
+  });
+
+  // label only the best and worst hour
+  const best = have.reduce((a, b) => (b.avg > a.avg ? b : a));
+  const worst = have.reduce((a, b) => (b.avg < a.avg ? b : a));
+  [[best, -10], [worst, 18]].forEach(([p, dy]) => {
+    if (best === worst) return;
+    const i = hours.indexOf(p.h);
+    const anchor = i === 0 ? 'start' : i === hours.length - 1 ? 'end' : 'middle';
+    const t = svgNS('text', { x: x(i), y: y(p.avg) + dy, 'text-anchor': anchor, class: 'vlabel' });
+    t.textContent = p.avg.toFixed(1); svg.appendChild(t);
+  });
+
+  // crosshair + tooltip
+  const cross = svgNS('line', { y1: mt, y2: mt + ih, stroke: 'var(--axis)', 'stroke-width': 1, opacity: 0 });
+  svg.appendChild(cross);
+  const hit = svgNS('rect', { x: ml, y: mt, width: iw, height: ih, fill: 'transparent' });
+  svg.appendChild(hit);
+  host.appendChild(svg);
+  const tip = tipLayer(host);
+
+  const at = ev => {
+    const r = svg.getBoundingClientRect();
+    const px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / r.width * W;
+    let bi = 0, bd = Infinity;
+    hours.forEach((h, i) => { const d = Math.abs(x(i) - px); if (d < bd) { bd = d; bi = i; } });
+    const p = pts[bi];
+    cross.setAttribute('x1', x(bi)); cross.setAttribute('x2', x(bi)); cross.setAttribute('opacity', 1);
+    tip.show(x(bi) / W * r.width, (p.avg === null ? mt + ih / 2 : y(p.avg)) / H * r.height,
+      p.avg === null
+        ? `<b>${hourLabelLong(p.h)}</b><br>never logged`
+        : `<b>${hourLabelLong(p.h)}</b><br>${p.avg.toFixed(1)} · ${MOOD_WORDS[Math.round(p.avg)]}<br>${p.n} log${p.n === 1 ? '' : 's'}`);
+  };
+  wireTip(svg, at, () => { cross.setAttribute('opacity', 0); tip.hide(); });
+
+  // table view
+  const tbl = el('table', { class: 'data' });
+  tbl.innerHTML = '<thead><tr><th>Hour</th><th>Average</th><th>Logs</th></tr></thead><tbody>' +
+    pts.map(p => `<tr><td>${hourLabelLong(p.h)}</td><td>${p.avg === null ? '–' : p.avg.toFixed(1)}</td><td>${p.n}</td></tr>`).join('') +
+    '</tbody>';
+  const holder = $('#hourTable');
+  holder.innerHTML = ''; holder.appendChild(tbl);
+}
+
+/* ---- B. last 7 days (diverging heatmap) ---- */
+function renderHeat() {
+  const host = $('#heatViz');
+  const { dayStart, dayEnd } = store.settings;
+  const days = [];
+  for (let i = 6; i >= 0; i--) days.push(addDays(startOfDay(new Date()), -i));
+  const hours = [];
+  for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
+
+  const any = days.some(d => hours.some(h => store.entries[slotKey(new Date(d.getFullYear(), d.getMonth(), d.getDate(), h))]));
+  const legend = $('#heatLegend');
+  legend.innerHTML = '';
+  if (!any) { emptyState(host, 'Nothing in the last 7 days yet.'); $('#heatTable').hidden = true; return; }
+
+  const lw = 34, cell = Math.max(10, Math.min(22, Math.floor((640 - lw - 8) / hours.length) - 2)), gap = 2;
+  const W = lw + hours.length * (cell + gap), rowH = cell + gap;
+  const H = 16 + days.length * rowH;
+
+  host.innerHTML = '';
+  const svg = svgNS('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Mood for every hour of the last seven days' });
+
+  hours.forEach((h, i) => {
+    if (i % 3 !== 0) return;
+    const t = svgNS('text', { x: lw + i * (cell + gap) + cell / 2, y: 9, 'text-anchor': 'middle', class: 'tick' });
+    t.textContent = hourLabel(h); svg.appendChild(t);
+  });
+
+  const tipData = [];
+  days.forEach((d, r) => {
+    const yTop = 16 + r * rowH;
+    const lab = svgNS('text', { x: 0, y: yTop + cell / 2 + 3.5, class: 'tick' });
+    lab.textContent = sameDay(d, new Date()) ? 'today' : dayNames[d.getDay()].slice(0, 3).toLowerCase();
+    svg.appendChild(lab);
+    hours.forEach((h, i) => {
+      const k = slotKey(new Date(d.getFullYear(), d.getMonth(), d.getDate(), h));
+      const e = store.entries[k];
+      const cx = lw + i * (cell + gap);
+      const rect = svgNS('rect', {
+        x: cx, y: yTop, width: cell, height: cell, rx: 3,
+        fill: e ? `var(--mood-${e.mood})` : 'none',
+        stroke: e ? 'none' : 'var(--grid)', 'stroke-width': e ? 0 : 1,
+      });
+      svg.appendChild(rect);
+      tipData.push({ rect, d, h, e, cx: cx + cell / 2, cy: yTop });
+    });
+  });
+  host.appendChild(svg);
+  const tip = tipLayer(host);
+  const pick = ev => {
+    const r = svg.getBoundingClientRect();
+    const px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / r.width * W;
+    const py = ((ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top) / r.height * H;
+    let best = null, bd = Infinity;
+    tipData.forEach(c => {
+      const dx = c.cx - px, dy = (c.cy + cell / 2) - py, dist = dx * dx + dy * dy;
+      if (dist < bd) { bd = dist; best = c; }
+    });
+    if (!best || bd > (cell * 1.6) ** 2) { tip.hide(); return; }
+    const when = `${sameDay(best.d, new Date()) ? 'Today' : dayNames[best.d.getDay()]} ${hourLabel(best.h)}`;
+    tip.show(best.cx / W * r.width, best.cy / H * r.height,
+      best.e
+        ? `<b>${when}</b><br>${MOOD_WORDS[best.e.mood]}${best.e.emotions && best.e.emotions.length ? '<br>' + esc(best.e.emotions.join(', ')) : ''}`
+        : `<b>${when}</b><br>not logged`);
+  };
+  wireTip(svg, pick, tip.hide);
+
+  [1, 2, 3, 4, 5].forEach(m => {
+    legend.appendChild(el('span', { class: 'item', html: `<span class="sw" style="background:var(--mood-${m})"></span>${MOOD_WORDS[m]}` }));
+  });
+  legend.appendChild(el('span', { class: 'item', html: '<span class="sw" style="background:none;border:1px solid var(--axis)"></span>not logged' }));
+
+  const tbl = el('table', { class: 'data' });
+  tbl.innerHTML = '<thead><tr><th>Day</th><th>Logged</th><th>Average</th></tr></thead><tbody>' +
+    days.map(d => {
+      const ms = hours.map(h => store.entries[slotKey(new Date(d.getFullYear(), d.getMonth(), d.getDate(), h))]).filter(Boolean).map(e => e.mood);
+      const a = average(ms);
+      return `<tr><td>${dayNames[d.getDay()].slice(0, 3)} ${monNames[d.getMonth()]} ${d.getDate()}</td><td>${ms.length}</td><td>${a === null ? '–' : a.toFixed(1)}</td></tr>`;
+    }).join('') + '</tbody>';
+  const holder = $('#heatTable');
+  holder.innerHTML = ''; holder.appendChild(tbl);
+}
+
+/* ---- C. most-logged emotions (horizontal bars) ---- */
+function renderEmotions() {
+  const host = $('#emoViz');
+  const counts = {};
+  Object.values(store.entries).forEach(e => (e.emotions || []).forEach(n => { counts[n] = (counts[n] || 0) + 1; }));
+  const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!rows.length) {
+    emptyState(host, 'Tap some feelings when you check in and they get counted here.');
+    $('#emoTable').hidden = true;
+    return;
+  }
+
+  const W = 640, lw = 108, mr = 40, bar = Math.min(24, 26), gap = 10;
+  const H = rows.length * (bar + gap);
+  const max = rows[0][1];
+  const iw = W - lw - mr;
+
+  host.innerHTML = '';
+  const svg = svgNS('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Most logged feelings' });
+  const tipRects = [];
+  rows.forEach(([name, n], i) => {
+    const y = i * (bar + gap);
+    const t = svgNS('text', { x: lw - 8, y: y + bar / 2 + 4, 'text-anchor': 'end', class: 'tick' });
+    t.textContent = name; svg.appendChild(t);
+    const w = Math.max(3, (n / max) * iw);
+    // square at the baseline, 4px rounded data-end
+    const r = 4;
+    svg.appendChild(svgNS('path', {
+      d: `M${lw} ${y} H${lw + w - r} a${r} ${r} 0 0 1 ${r} ${r} V${y + bar - r} a${r} ${r} 0 0 1 -${r} ${r} H${lw} Z`,
+      fill: 'var(--series-1)',
+    }));
+    const v = svgNS('text', { x: lw + w + 7, y: y + bar / 2 + 4, class: 'vlabel' });
+    v.textContent = n; svg.appendChild(v);
+    tipRects.push({ name, n, y, w });
+  });
+  svg.appendChild(svgNS('line', { x1: lw, x2: lw, y1: 0, y2: H - gap, stroke: 'var(--axis)', 'stroke-width': 1 }));
+  host.appendChild(svg);
+
+  const tip = tipLayer(host);
+  const total = Object.keys(store.entries).length;
+  const pick = ev => {
+    const rb = svg.getBoundingClientRect();
+    const py = ((ev.touches ? ev.touches[0].clientY : ev.clientY) - rb.top) / rb.height * H;
+    const row = tipRects.find(r => py >= r.y - gap / 2 && py <= r.y + bar + gap / 2);
+    if (!row) { tip.hide(); return; }
+    tip.show((lw + row.w / 2) / W * rb.width, row.y / H * rb.height,
+      `<b>${esc(row.name)}</b><br>${row.n} of ${total} check-ins`);
+  };
+  wireTip(svg, pick, tip.hide);
+
+  const tbl = el('table', { class: 'data' });
+  tbl.innerHTML = '<thead><tr><th>Feeling</th><th>Times</th></tr></thead><tbody>' +
+    Object.entries(counts).sort((a, b) => b[1] - a[1])
+      .map(([n, c]) => `<tr><td>${esc(n)}</td><td>${c}</td></tr>`).join('') + '</tbody>';
+  const holder = $('#emoTable');
+  holder.innerHTML = ''; holder.appendChild(tbl);
+}
+
+/* ============================================================
+   settings
+   ============================================================ */
+function fillHourSelects() {
+  const s = $('#dayStart'), e = $('#dayEnd');
+  s.innerHTML = ''; e.innerHTML = '';
+  for (let h = 0; h <= 23; h++) {
+    s.appendChild(el('option', { value: h, text: hourLabel(h) }));
+    e.appendChild(el('option', { value: h, text: hourLabel(h) }));
+  }
+  s.value = store.settings.dayStart;
+  e.value = store.settings.dayEnd;
+  const onChange = () => {
+    let a = +s.value, b = +e.value;
+    if (b < a) { b = a; e.value = b; }
+    store.settings.dayStart = a; store.settings.dayEnd = b;
+    save(); renderAll();
+  };
+  s.onchange = onChange; e.onchange = onChange;
+}
+function renderSettings() {
+  const { dayStart, dayEnd } = store.settings;
+  const n = dayEnd - dayStart + 1;
+  $('#windowSub').textContent = `${n} check-in${n === 1 ? '' : 's'} a day`;
+  const btn = $('#notifyBtn');
+  const sub = $('#notifySub');
+  if (!('Notification' in window)) {
+    btn.textContent = 'Not available'; btn.disabled = true; btn.style.opacity = 0.5;
+    sub.textContent = 'this browser has no notifications';
+  } else if (Notification.permission === 'denied') {
+    btn.textContent = 'Blocked'; btn.disabled = true; btn.style.opacity = 0.5;
+    sub.textContent = 'allow notifications in your browser settings first';
+  } else if (store.settings.notify && Notification.permission === 'granted') {
+    btn.textContent = 'On'; btn.disabled = false;
+    sub.textContent = 'fires on the hour while the app is open';
+  } else {
+    btn.textContent = 'Turn on'; btn.disabled = false;
+    sub.textContent = 'only works while the app is open — see the README for iPhone';
+  }
+}
+
+/* ============================================================
+   notifications (foreground only — see README)
+   ============================================================ */
+let hourTimer = null;
+function scheduleHourTick() {
+  if (hourTimer) clearTimeout(hourTimer);
+  const now = new Date();
+  const ms = (60 - now.getMinutes()) * 60e3 - now.getSeconds() * 1000 + 1500;
+  hourTimer = setTimeout(() => {
+    onNewHour();
+    scheduleHourTick();
+  }, Math.max(1000, ms));
+}
+function onNewHour() {
+  const cur = slotKey(new Date());
+  if (editing && editing !== cur && !store.entries[editing]) { /* leave a half-finished backfill alone */ }
+  else { beginEdit(cur); delete $('#checkinCard').dataset.reopen; }
+  renderAll();
+  maybeNotify();
+}
+function maybeNotify() {
+  if (!store.settings.notify) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const now = new Date();
+  if (!inWindow(now.getHours())) return;
+  if (store.entries[slotKey(now)]) return;
+  try {
+    new Notification('How are you feeling?', {
+      body: `${hourLabelLong(now.getHours())} — takes five seconds.`,
+      tag: 'hourly-' + slotKey(now),
+      icon: 'icon-192.png',
+    });
+  } catch (e) { /* some browsers only allow this from a service worker */ }
+}
+
+/* ============================================================
+   export / wipe
+   ============================================================ */
+function download(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = el('a', { href: url, download: name });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function exportJson() {
+  download(`hourly-${dayKey(new Date())}.json`, JSON.stringify(store, null, 2), 'application/json');
+}
+function exportCsv() {
+  const rows = [['date', 'hour', 'mood', 'mood_word', 'feelings', 'note', 'filled_in_later']];
+  Object.keys(store.entries).sort().forEach(k => {
+    const e = store.entries[k];
+    rows.push([
+      k.slice(0, 10), k.slice(11), e.mood, MOOD_WORDS[e.mood],
+      (e.emotions || []).join(' '), (e.note || '').replace(/\r?\n/g, ' '), e.late ? 'yes' : 'no',
+    ]);
+  });
+  const csv = rows.map(r => r.map(c => {
+    const s = String(c);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(',')).join('\n');
+  download(`hourly-${dayKey(new Date())}.csv`, csv, 'text/csv');
+}
+
+/* ============================================================
+   tabs + boot
+   ============================================================ */
+function setTab(name) {
+  tab = name;
+  ['now', 'today', 'patterns'].forEach(t => { $('#view-' + t).hidden = t !== name; });
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  if (name === 'today') viewDay = startOfDay(new Date());
+  renderAll();
+}
+
+function renderAll() {
+  $('#clock').textContent = hourLabelLong(new Date().getHours()).toLowerCase();
+  if (tab === 'now') { renderNow(); renderCatchup(); renderProgress(); }
+  else { renderCatchup(); }
+  if (tab === 'today') renderToday();
+  if (tab === 'patterns') { renderTiles(); renderHourChart(); renderHeat(); renderEmotions(); renderSettings(); }
+}
+
+function boot() {
+  // theme toggle: light -> dark -> follow the system
+  const savedTheme = (() => { try { return localStorage.getItem('hourly.theme'); } catch (e) { return null; } })();
+  if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+  $('#themeBtn').onclick = () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'light' ? 'dark' : cur === 'dark' ? null : 'light';
+    if (next) { document.documentElement.setAttribute('data-theme', next); }
+    else { document.documentElement.removeAttribute('data-theme'); }
+    try { next ? localStorage.setItem('hourly.theme', next) : localStorage.removeItem('hourly.theme'); } catch (e) {}
+    if (tab === 'patterns') renderAll();
+  };
+
+  // tapping anywhere outside a chart puts its tooltip away
+  document.addEventListener('pointerdown', ev => {
+    document.querySelectorAll('.viz').forEach(v => {
+      if (v.contains(ev.target)) return;
+      const svg = v.querySelector('svg');
+      if (svg && svg._onLeave) svg._onLeave();
+    });
+  }, true);
+
+  document.querySelectorAll('nav.tabs button').forEach(b => { b.onclick = () => setTab(b.dataset.tab); });
+  $('#dayPrev').onclick = () => { viewDay = addDays(viewDay, -1); renderToday(); };
+  $('#dayNext').onclick = () => { if (!sameDay(viewDay, new Date())) { viewDay = addDays(viewDay, 1); renderToday(); } };
+
+  document.querySelectorAll('[data-numbers]').forEach(b => {
+    b.onclick = () => {
+      const t = $('#' + b.dataset.numbers);
+      const open = t.hidden;
+      t.hidden = !open;
+      b.setAttribute('aria-expanded', String(open));
+      b.textContent = open ? 'Hide' : 'Numbers';
+    };
+  });
+
+  fillHourSelects();
+  $('#notifyBtn').onclick = async () => {
+    if (store.settings.notify) { store.settings.notify = false; save(); renderSettings(); return; }
+    if (!('Notification' in window)) return;
+    let p = Notification.permission;
+    if (p === 'default') p = await Notification.requestPermission();
+    store.settings.notify = p === 'granted';
+    save(); renderSettings();
+    if (store.settings.notify) say('Notifications on.');
+  };
+  $('#exportJson').onclick = exportJson;
+  $('#exportCsv').onclick = exportCsv;
+  $('#wipeBtn').onclick = () => {
+    const n = Object.keys(store.entries).length;
+    if (!n) { say('Nothing to erase.'); return; }
+    if (!confirm(`Erase all ${n} entries? This cannot be undone.`)) return;
+    store.entries = {};
+    save(); renderAll(); say('Everything erased.');
+  };
+
+  beginEdit(slotKey(new Date()));
+  setTab('now');
+  scheduleHourTick();
+
+  // iOS suspends timers when the app is backgrounded — re-check on the way back in
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const cur = slotKey(new Date());
+    if (editing !== cur && !store.entries[editing]) { /* keep an in-progress backfill */ }
+    else if (editing !== cur) { beginEdit(cur); delete $('#checkinCard').dataset.reopen; }
+    renderAll();
+    scheduleHourTick();
+  });
+  setInterval(() => { if (tab === 'now' && document.visibilityState === 'visible') renderAll(); }, 60e3);
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+boot();
+</script>
+</body>
+</html>
