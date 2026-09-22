@@ -28,17 +28,6 @@
   --wash:           rgba(11,11,11,0.04);
   --series-1:       #2a78d6;
   --series-1-wash:  rgba(42,120,214,0.10);
-  /* diverging mood scale: red arm <- neutral -> blue arm */
-  --mood-1:         #c93a39;
-  --mood-2:         #ec9998;
-  --mood-3:         #f0efec;
-  --mood-4:         #86b6ef;
-  --mood-5:         #2a78d6;
-  --mood-1-ink:     #ffffff;
-  --mood-2-ink:     #0b0b0b;
-  --mood-3-ink:     #0b0b0b;
-  --mood-4-ink:     #0b0b0b;
-  --mood-5-ink:     #ffffff;
   --radius:         14px;
   --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -56,17 +45,7 @@
     --wash:           rgba(255,255,255,0.05);
     --series-1:       #3987e5;
     --series-1-wash:  rgba(57,135,229,0.12);
-    --mood-1:         #e66767;
-    --mood-2:         #b83b3a;
-    --mood-3:         #383835;
-    --mood-4:         #1c5cab;
-    --mood-5:         #5598e7;
-    --mood-1-ink:     #0b0b0b;
-    --mood-2-ink:     #ffffff;
-    --mood-3-ink:     #ffffff;
-    --mood-4-ink:     #ffffff;
-    --mood-5-ink:     #0b0b0b;
-  }
+                      }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -81,16 +60,6 @@
   --wash:           rgba(255,255,255,0.05);
   --series-1:       #3987e5;
   --series-1-wash:  rgba(57,135,229,0.12);
-  --mood-1:         #e66767;
-  --mood-2:         #b83b3a;
-  --mood-3:         #383835;
-  --mood-4:         #1c5cab;
-  --mood-5:         #5598e7;
-  --mood-1-ink:     #0b0b0b;
-  --mood-2-ink:     #ffffff;
-  --mood-3-ink:     #ffffff;
-  --mood-4-ink:     #ffffff;
-  --mood-5-ink:     #0b0b0b;
 }
 
 /* ---------- shell ---------- */
@@ -142,23 +111,6 @@ header.top .clock { font-size: 0.82rem; color: var(--muted); font-variant-numeri
 
 /* ---------- check-in ---------- */
 .slotline { font-size: 0.82rem; color: var(--muted); margin-bottom: 10px; }
-.moods { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 4px 0 2px; }
-.mood {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  padding: 10px 2px 8px; display: grid; gap: 3px; justify-items: center;
-  transition: transform 0.07s ease;
-}
-.mood:active { transform: scale(0.96); }
-.mood .face { font-size: 1.45rem; line-height: 1.1; }
-.mood .lbl { font-size: 0.66rem; color: var(--muted); letter-spacing: 0.01em; }
-.mood[aria-pressed="true"] { border-color: transparent; }
-.mood[aria-pressed="true"] .lbl { color: inherit; opacity: 0.85; }
-.mood[data-m="1"][aria-pressed="true"] { background: var(--mood-1); color: var(--mood-1-ink); }
-.mood[data-m="2"][aria-pressed="true"] { background: var(--mood-2); color: var(--mood-2-ink); }
-.mood[data-m="3"][aria-pressed="true"] { background: var(--mood-3); color: var(--mood-3-ink); border-color: var(--border); }
-.mood[data-m="4"][aria-pressed="true"] { background: var(--mood-4); color: var(--mood-4-ink); }
-.mood[data-m="5"][aria-pressed="true"] { background: var(--mood-5); color: var(--mood-5-ink); }
-
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* ---------- the feelings grid ---------- */
@@ -182,6 +134,17 @@ header.top .clock { font-size: 0.82rem; color: var(--muted); font-variant-numeri
 :root[data-labels="off"] .feel .nm { display: none; }
 :root[data-labels="off"] .feel { min-height: 66px; }
 .capline { font-size: 0.76rem; color: var(--muted); margin-top: 9px; }
+
+/* the feeling picker above the "when" chart */
+.fsel { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.fchip {
+  display: inline-flex; align-items: center; gap: 6px; background: none;
+  border: 1px solid var(--border); border-radius: 999px; padding: 0 11px; min-height: 32px;
+  font-size: 0.8rem; color: var(--ink-2); --fc: var(--muted);
+}
+.fchip .swatch { color: var(--fc); display: inline-flex; }
+.fchip[aria-pressed="true"] { border-color: var(--fc); background: color-mix(in srgb, var(--fc) 15%, transparent); color: var(--ink); font-weight: 600; }
+.tile .v.word { font-size: 1.02rem; line-height: 1.3; margin-top: 3px; }
 .capline.warn { color: var(--ink); }
 
 /* ---------- the info sheet ---------- */
@@ -376,36 +339,36 @@ select {
   <section id="view-patterns" hidden>
     <div class="tiles" style="margin-bottom:12px">
       <div class="tile"><div class="k">Today</div><div class="v" id="tToday">–</div><div class="s" id="tTodaySub">no logs yet</div></div>
-      <div class="tile"><div class="k">7-day average</div><div class="v" id="tWeek">–</div><div class="s" id="tWeekSub">&nbsp;</div></div>
+      <div class="tile"><div class="k">Most this week</div><div class="v word" id="tWeek">–</div><div class="s" id="tWeekSub">&nbsp;</div></div>
       <div class="tile"><div class="k">Day streak</div><div class="v" id="tStreak">0</div><div class="s" id="tStreakSub">&nbsp;</div></div>
     </div>
 
     <div class="card">
       <div class="chart-head">
-        <div><h3>Mood by time of day</h3><p class="hint" id="hourSub">average of every hour you've logged</p></div>
-        <button class="numbtn" data-numbers="hourTable" aria-expanded="false">Numbers</button>
-      </div>
-      <div class="viz" id="hourViz"></div>
-      <div id="hourTable" hidden></div>
-    </div>
-
-    <div class="card">
-      <div class="chart-head">
-        <div><h3>The last 7 days</h3><p class="hint">each square is one hour</p></div>
-        <button class="numbtn" data-numbers="heatTable" aria-expanded="false">Numbers</button>
-      </div>
-      <div class="viz" id="heatViz"></div>
-      <div class="legend" id="heatLegend"></div>
-      <div id="heatTable" hidden></div>
-    </div>
-
-    <div class="card">
-      <div class="chart-head">
-        <div><h3>What you feel most</h3><p class="hint" id="emoSub">times logged, all time</p></div>
+        <div><h3>What you feel most</h3><p class="hint">times logged, all time</p></div>
         <button class="numbtn" data-numbers="emoTable" aria-expanded="false">Numbers</button>
       </div>
       <div class="viz" id="emoViz"></div>
       <div id="emoTable" hidden></div>
+    </div>
+
+    <div class="card">
+      <div class="chart-head">
+        <div><h3>When you feel it</h3><p class="hint">which hours it turns up in</p></div>
+        <button class="numbtn" data-numbers="whenTable" aria-expanded="false">Numbers</button>
+      </div>
+      <div class="fsel" id="whenPick" role="group" aria-label="Which feeling to chart"></div>
+      <div class="viz" id="whenViz"></div>
+      <div id="whenTable" hidden></div>
+    </div>
+
+    <div class="card">
+      <div class="chart-head">
+        <div><h3>The last 7 days</h3><p class="hint">one square an hour — tap for what it was</p></div>
+        <button class="numbtn" data-numbers="heatTable" aria-expanded="false">Numbers</button>
+      </div>
+      <div class="viz" id="heatViz"></div>
+      <div id="heatTable" hidden></div>
     </div>
 
     <div class="card">
@@ -470,8 +433,6 @@ select {
    data
    ============================================================ */
 const KEY = 'hourly.v1';
-const MOOD_WORDS = { 1: 'awful', 2: 'low', 3: 'okay', 4: 'good', 5: 'great' };
-const FACES = { 1: '\u{1F616}', 2: '\u{1F615}', 3: '\u{1F610}', 4: '\u{1F642}', 5: '\u{1F604}' };
 
 /* ============================================================
    the feelings
@@ -507,22 +468,27 @@ const FEELINGS = [
   { id: 'anxious', name: 'Anxious', color: '#b257ba',
     icon: '<path d="M3 12c1.2-4 2.4-4 3.6 0s2.4 4 3.6 0 2.4-4 3.6 0 2.4 4 3.6 0"/>',
     what: "Unease about something that hasn't happened yet. It's often physical — fast heartbeat, tight chest, restlessness — and the body's version of it is nearly identical to excitement. The difference is whether you want the thing that's coming.",
-    related: ['not-in-control', 'irritable'] },
+    related: ['stressed', 'not-in-control'] },
+
+  { id: 'stressed', name: 'Stressed', color: '#ae85b2',
+    icon: '<path d="M12 4v16"/><path d="M3.6 12h4.8M6.2 9.6L8.6 12l-2.4 2.4"/><path d="M20.4 12h-4.8M17.8 9.6L15.4 12l2.4 2.4"/>',
+    what: "Being under more demand than you have resources for right now — time, energy, attention, or all three. It usually attaches to specific things that need doing, and eases as they get done or get dropped.",
+    related: ['anxious', 'not-in-control'] },
 
   { id: 'angry', name: 'Angry', color: '#dc453a',
-    icon: '<circle cx="12" cy="12" r="8.4"/><path d="M8.4 9.2l2.6 1.3M15.6 9.2l-2.6 1.3"/><path d="M9.2 15h5.6"/>',
+    icon: '<circle cx="12" cy="12" r="8.4"/><path d="M8.3 8.7l3 1.7M15.7 8.7l-3 1.7"/><circle cx="9.9" cy="12.6" r=".95" fill="currentColor" stroke="none"/><circle cx="14.1" cy="12.6" r=".95" fill="currentColor" stroke="none"/><path d="M9.4 16.2h5.2"/>',
     what: "A response to something that reads as unfair, blocked, or threatening. It usually has a target, and often comes with physical heat or tension.",
     related: ['irritable', 'not-in-control'] },
 
   { id: 'excited', name: 'Excited', color: '#c65c10',
-    icon: '<path d="M11 3.4l1.6 4.6 4.6 1.6-4.6 1.6L11 15.8l-1.6-4.6L4.8 9.6l4.6-1.6z"/><path d="M18.2 15.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/>',
+    icon: '<path d="M4 19.4h16"/><path d="M12 16.4V5.8"/><path d="M8.2 9.6L12 5.8l3.8 3.8"/>',
     what: "High energy aimed at something you're anticipating. Physically close to anxiety — the same fast heartbeat and restlessness — pointed at something wanted.",
     related: ['hopeful', 'happy'] },
 
   { id: 'irritable', name: 'Irritable', color: '#b8616c',
-    icon: '<path d="M3 15.6h3.4L8.2 9l2.6 8.4L13.4 6l1.9 7.6 1.3-2.6H21"/>',
+    icon: '<path d="M7.4 13.2a3.2 3.2 0 0 1 .5-6.3 4.4 4.4 0 0 1 8.3.9 2.8 2.8 0 0 1-.4 5.4z"/><path d="M12.8 15.4l-2.2 3.4h2.6l-2 3.2"/>',
     what: "A lowered threshold for annoyance: small things get a bigger reaction than they normally would. Strongly tied to tiredness, hunger, pain, and noise.",
-    related: ['angry', 'anxious'] },
+    related: ['angry', 'stressed'] },
 
   { id: 'hopeful', name: 'Hopeful', color: '#22897b',
     icon: '<path d="M3.6 19h16.8"/><path d="M7.6 19a4.4 4.4 0 0 1 8.8 0"/><path d="M12 5.2v2.2M6.1 8.2l1.6 1.6M17.9 8.2l-1.6 1.6M3.6 14.6h2M18.4 14.6h2"/>',
@@ -535,7 +501,7 @@ const FEELINGS = [
     related: ['happy', 'hopeful'] },
 
   { id: 'confident', name: 'Confident', color: '#1d85a7',
-    icon: '<path d="M4 19.4h16"/><path d="M12 16.4V5.8"/><path d="M8.2 9.6L12 5.8l3.8 3.8"/>',
+    icon: '<path d="M11 3.4l1.6 4.6 4.6 1.6-4.6 1.6L11 15.8l-1.6-4.6L4.8 9.6l4.6-1.6z"/><path d="M18.2 15.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/>',
     what: "Expecting that you can handle what's in front of you. It's about the thing ahead of you rather than about your worth.",
     related: ['smart', 'hopeful'] },
 
@@ -677,7 +643,7 @@ function missedSlots() {
    ============================================================ */
 let tab = 'now';
 let editing = null;                 // slot key being logged
-let draft = { mood: null, emotions: [], note: '' };
+let draft = { emotions: [], note: '' };
 let noteOpen = false;
 let viewDay = startOfDay(new Date());
 
@@ -700,8 +666,8 @@ function beginEdit(key) {
   editing = key;
   const e = store.entries[key];
   draft = e
-    ? { mood: e.mood, emotions: (e.emotions || []).slice(), note: e.note || '' }
-    : { mood: null, emotions: [], note: '' };
+    ? { emotions: (e.emotions || []).slice(), note: e.note || '' }
+    : { emotions: [], note: '' };
   noteOpen = !!draft.note;
 }
 
@@ -724,8 +690,9 @@ function renderNow() {
     // this hour is answered — show it back, and say plainly why there's nothing
     // to do yet. The next hour is not answerable early on purpose.
     card.appendChild(el('p', { class: 'slotline', text: `${hourLabelLong(d.getHours())} \u00b7 logged` }));
-    card.appendChild(el('h2', { text: `${FACES[existing.mood]}  ${MOOD_WORDS[existing.mood]}` }));
-    if (existing.emotions && existing.emotions.length) card.appendChild(feelingRow(existing.emotions));
+    const logged = (existing.emotions || []).map(feelName);
+    card.appendChild(el('h2', { text: logged.length ? logged.join(' and ') : 'Logged' }));
+    if (existing.emotions && existing.emotions.length) card.appendChild(feelingRow(existing.emotions, 19));
     if (existing.note) card.appendChild(el('p', { style: 'margin-top:9px;font-size:0.88rem;color:var(--ink-2);white-space:pre-wrap', text: existing.note }));
 
     const next = new Date(now.getTime() + 3600e3); next.setMinutes(0, 0, 0);
@@ -757,27 +724,13 @@ function renderNow() {
     card.appendChild(el('p', { class: 'askline', text: "You missed this one, so near enough is fine." }));
   }
 
-  const moods = el('div', { class: 'moods' });
-  for (let m = 1; m <= 5; m++) {
-    const b = el('button', { class: 'mood', 'data-m': m, 'aria-pressed': String(draft.mood === m), 'aria-label': MOOD_WORDS[m] }, [
-      el('span', { class: 'face', text: FACES[m], 'aria-hidden': 'true' }),
-      el('span', { class: 'lbl', text: MOOD_WORDS[m] }),
-    ]);
-    b.onclick = () => {
-      draft.mood = m;
-      // update in place rather than re-render, so a half-typed note keeps focus
-      moods.querySelectorAll('.mood').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.m === m)));
-      submit.disabled = false;
-    };
-    moods.appendChild(b);
-  }
-  card.appendChild(moods);
-
   /* the feelings themselves */
   const grid = el('div', { class: 'feelings' });
   const cap = el('p', { class: 'capline' });
+  let submit;
   const syncCap = () => {
     const n = draft.emotions.length;
+    if (submit) submit.disabled = n === 0;
     cap.textContent = n === 0 ? 'Pick up to two.'
       : n < MAX_PICKS ? 'You can pick one more.'
       : 'Two is the most \u2014 tap one to let it go.';
@@ -819,7 +772,6 @@ function renderNow() {
   });
   card.appendChild(grid);
   card.appendChild(cap);
-  syncCap();
 
   if (noteOpen) {
     const ta = el('textarea', { placeholder: "What's going on? (optional)", maxlength: '500' });
@@ -832,10 +784,10 @@ function renderNow() {
     card.appendChild(add);
   }
 
-  const submit = el('button', { class: 'btn', text: store.entries[editing] ? 'Save changes' : 'Log it' });
-  submit.disabled = draft.mood === null;
+  submit = el('button', { class: 'btn', text: store.entries[editing] ? 'Save changes' : 'Log it' });
   submit.onclick = commit;
   card.appendChild(submit);
+  syncCap();
 
   if (!isCurrent) {
     const cancel = el('button', { class: 'btn ghost slim', text: 'Back to now' });
@@ -912,22 +864,20 @@ function closeSheet() {
 }
 
 function commit() {
-  if (draft.mood === null) return;
+  if (!draft.emotions.length) return;
   const cur = slotKey(new Date());
   store.entries[editing] = {
-    mood: draft.mood,
     emotions: draft.emotions.slice(),
     note: draft.note.trim(),
     at: Date.now(),
     late: editing !== cur,
   };
   save();
-  say(`Logged ${MOOD_WORDS[draft.mood]} for ${hourLabelLong(slotDate(editing).getHours())}.`);
+  say(`Logged ${draft.emotions.map(feelName).join(' and ')} for ${hourLabelLong(slotDate(editing).getHours())}.`);
   delete $('#checkinCard').dataset.reopen;
   beginEdit(cur);
   renderAll();
 }
-
 function countdownText() {
   const now = new Date();
   const mins = 60 - now.getMinutes();
@@ -983,15 +933,17 @@ function renderProgress() {
   const meter = el('div', { class: 'meter', role: 'img', 'aria-label': `${done} of ${today.length} hours logged today` });
   meter.appendChild(el('i', { style: `width:${pct}%` }));
   card.appendChild(meter);
-  const avg = average(today.map(k => store.entries[k] && store.entries[k].mood).filter(Boolean));
+
+  const counts = {};
+  today.forEach(k => ((store.entries[k] || {}).emotions || []).forEach(id => { counts[id] = (counts[id] || 0) + 1; }));
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
   card.appendChild(el('p', {
     class: 'hint', style: 'margin-top:8px',
-    text: avg === null
+    text: !top
       ? 'Nothing logged yet today.'
-      : `Averaging ${avg.toFixed(1)} — ${MOOD_WORDS[Math.round(avg)]}.`,
+      : `Mostly ${feelName(top[0]).toLowerCase()} — ${top[1]} of ${done} check-in${done === 1 ? '' : 's'}.`,
   }));
 }
-
 /* ============================================================
    TODAY — the timeline
    ============================================================ */
@@ -1013,12 +965,11 @@ function renderToday() {
   });
 
   const logged = hours.filter(h => store.entries[slotKey(new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h))]);
-  const avg = average(logged.map(h => store.entries[slotKey(new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h))].mood));
   $('#daySummary').textContent = !hours.length
-    ? 'This day is outside the hours you asked about.'
-    : avg === null
+    ? "This day is outside the hours you're awake for."
+    : !logged.length
       ? 'Nothing logged this day.'
-      : `${logged.length} of ${hours.length} hours · averaging ${avg.toFixed(1)}`;
+      : `${logged.length} of ${hours.length} hours logged`;
 
   hours.forEach(h => {
     const k = slotKey(new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h));
@@ -1027,10 +978,14 @@ function renderToday() {
     li.appendChild(el('span', { class: 'when', text: hourLabel(h) }));
     const body = el('div', { class: 'body' });
     if (e) {
-      body.appendChild(el('span', { class: 'dot', style: `background:var(--mood-${e.mood})`, 'aria-hidden': 'true' }));
+      const first = BY_ID[(e.emotions || [])[0]];
+      body.appendChild(el('span', {
+        class: 'dot', 'aria-hidden': 'true',
+        style: first ? `background:${first.color};border-color:${first.color}` : 'background:var(--axis)',
+      }));
       const txt = el('div');
       const line = el('div', { class: 'what' });
-      line.appendChild(el('span', { text: MOOD_WORDS[e.mood] }));
+      line.appendChild(el('span', { text: (e.emotions || []).map(feelName).join(' and ') || 'logged' }));
       if (e.late) line.appendChild(el('span', { class: 'tag', text: 'filled in later' }));
       txt.appendChild(line);
       if (e.emotions && e.emotions.length) txt.appendChild(feelingRow(e.emotions, 16));
@@ -1055,10 +1010,6 @@ function renderToday() {
 /* ============================================================
    stats
    ============================================================ */
-function average(nums) {
-  const a = nums.filter(n => typeof n === 'number');
-  return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
-}
 function entriesInLastDays(n) {
   const cutoff = addDays(startOfDay(new Date()), -(n - 1));
   return Object.keys(store.entries)
@@ -1079,22 +1030,21 @@ function streakDays() {
 }
 
 function renderTiles() {
-  const todayAvg = average(slotsForDay(new Date()).map(k => store.entries[k] && store.entries[k].mood));
-  const week = entriesInLastDays(7);
-  const weekAvg = average(week.map(e => e.mood));
+  const today = slotsForDay(new Date());
+  const done = today.filter(k => store.entries[k]).length;
+  $('#tToday').textContent = done;
+  $('#tTodaySub').textContent = today.length ? `of ${today.length} hours` : 'no hours yet';
 
-  $('#tToday').textContent = todayAvg === null ? '–' : todayAvg.toFixed(1);
-  $('#tTodaySub').textContent = todayAvg === null ? 'no logs yet' : MOOD_WORDS[Math.round(todayAvg)];
-  $('#tWeek').textContent = weekAvg === null ? '–' : weekAvg.toFixed(1);
-  $('#tWeekSub').textContent = weekAvg === null ? 'no logs yet'
-    : (todayAvg === null ? `${week.length} logs`
-      : (Math.abs(todayAvg - weekAvg) < 0.05 ? 'today is typical'
-        : `today is ${Math.abs(todayAvg - weekAvg).toFixed(1)} ${todayAvg > weekAvg ? 'above' : 'below'}`));
+  const counts = {};
+  entriesInLastDays(7).forEach(e => (e.emotions || []).forEach(id => { counts[id] = (counts[id] || 0) + 1; }));
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  $('#tWeek').textContent = top ? feelName(top[0]) : '–';
+  $('#tWeekSub').textContent = top ? `${top[1]} time${top[1] === 1 ? '' : 's'}` : 'no logs yet';
+
   const st = streakDays();
   $('#tStreak').textContent = st;
   $('#tStreakSub').textContent = st === 0 ? 'start today' : st === 1 ? 'day' : 'days in a row';
 }
-
 /* ============================================================
    charts — one shared tooltip helper
    ============================================================ */
@@ -1128,193 +1078,188 @@ function emptyState(host, msg) {
   host.appendChild(el('p', { class: 'empty', text: msg }));
 }
 
-/* ---- A. mood by hour of day (single-series line) ---- */
-function renderHourChart() {
-  const host = $('#hourViz');
-  const buckets = {};
-  Object.keys(store.entries).forEach(k => {
-    const h = slotDate(k).getHours();
-    if (!isAwake(h)) return;
-    (buckets[h] = buckets[h] || []).push(store.entries[k].mood);
-  });
-  const hours = awakeHours();
-  const pts = hours.map(h => ({ h, n: (buckets[h] || []).length, avg: average(buckets[h] || []) }));
-  const have = pts.filter(p => p.avg !== null);
-  if (have.length < 2) {
-    emptyState(host, have.length ? 'One hour logged. Log a couple more and the shape of your day shows up here.' : 'Nothing logged yet — this fills in as you check in.');
-    $('#hourTable').hidden = true;
+/* ---- A. when one feeling turns up (single-series columns) ---- */
+let whenId = null;
+function renderWhenChart() {
+  const host = $('#whenViz'), pick = $('#whenPick'), holder = $('#whenTable');
+  const counts = {};
+  Object.values(store.entries).forEach(e => (e.emotions || []).forEach(id => { counts[id] = (counts[id] || 0) + 1; }));
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    .map(([id]) => id).filter(id => BY_ID[id]).slice(0, 6);
+
+  pick.innerHTML = '';
+  if (!top.length) {
+    emptyState(host, 'Log a few hours and this shows which hours each feeling turns up in.');
+    holder.hidden = true;
     return;
   }
+  if (!top.includes(whenId)) whenId = top[0];
+  top.forEach(id => {
+    const f = BY_ID[id];
+    const b = el('button', {
+      class: 'fchip', 'aria-pressed': String(id === whenId), style: `--fc:${f.color}`,
+      html: `<span class="swatch">${glyph(f, 16)}</span><span>${esc(f.name)}</span>`,
+    });
+    b.onclick = () => { whenId = id; renderWhenChart(); };
+    pick.appendChild(b);
+  });
 
-  const W = 640, H = 220, ml = 30, mr = 14, mt = 14, mb = 26;
+  const f = BY_ID[whenId];
+  const hours = awakeHours();
+  const idx = {}; hours.forEach((h, i) => { idx[h] = i; });
+  const data = hours.map(h => ({ h, n: 0 }));
+  Object.keys(store.entries).forEach(k => {
+    if (!(store.entries[k].emotions || []).includes(whenId)) return;
+    const i = idx[slotDate(k).getHours()];
+    if (i !== undefined) data[i].n++;
+  });
+
+  const max = Math.max(1, ...data.map(d => d.n));
+  const W = 640, H = 190, ml = 24, mr = 10, mt = 16, mb = 26;
   const iw = W - ml - mr, ih = H - mt - mb;
-  const x = i => ml + (hours.length === 1 ? iw / 2 : (i / (hours.length - 1)) * iw);
-  const y = v => mt + ih - ((v - 1) / 4) * ih;
+  const band = iw / hours.length, bw = Math.min(24, band - 4);
+  const y = v => mt + ih - (v / max) * ih;
 
   host.innerHTML = '';
-  const svg = svgNS('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Average mood by hour of day' });
-
-  // gridlines + y ticks
-  [1, 2, 3, 4, 5].forEach(v => {
-    svg.appendChild(svgNS('line', { x1: ml, x2: W - mr, y1: y(v), y2: y(v), stroke: 'var(--grid)', 'stroke-width': 1 }));
-  });
-  [[1, 'awful'], [3, 'okay'], [5, 'great']].forEach(([v, lab]) => {
-    const t = svgNS('text', { x: ml - 6, y: y(v) + 3.5, 'text-anchor': 'end', class: 'tick' });
-    t.textContent = lab; svg.appendChild(t);
-  });
-  // x ticks — every third hour, plus the last
-  hours.forEach((h, i) => {
-    if (i % 3 !== 0 && i !== hours.length - 1) return;
-    const t = svgNS('text', { x: x(i), y: H - 8, 'text-anchor': 'middle', class: 'tick' });
-    t.textContent = hourLabel(h); svg.appendChild(t);
-  });
+  const svg = svgNS('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Which hours ${f.name} turns up in` });
+  // one gridline, at the top of the scale — enough to read heights against
+  svg.appendChild(svgNS('line', { x1: ml, x2: W - mr, y1: y(max), y2: y(max), stroke: 'var(--grid)', 'stroke-width': 1 }));
+  const cap = svgNS('text', { x: ml - 6, y: y(max) + 3.5, 'text-anchor': 'end', class: 'tick' });
+  cap.textContent = max; svg.appendChild(cap);
   svg.appendChild(svgNS('line', { x1: ml, x2: W - mr, y1: mt + ih, y2: mt + ih, stroke: 'var(--axis)', 'stroke-width': 1 }));
 
-  // Connect across one unlogged hour — an 11am you never happen to catch
-  // shouldn't punch a hole in the shape of your day — but break across any
-  // longer gap rather than draw a line through hours there's no evidence for.
-  const runs = [];
-  let run = [];
-  pts.forEach((p, i) => {
-    if (p.avg === null) return;
-    if (run.length && i - run[run.length - 1].i > 2) { runs.push(run); run = []; }
-    run.push({ ...p, i });
-  });
-  if (run.length) runs.push(run);
-
-  runs.forEach(r => {
-    if (r.length > 1) {
-      const d = r.map((p, j) => `${j ? 'L' : 'M'}${x(p.i).toFixed(1)} ${y(p.avg).toFixed(1)}`).join(' ');
-      const area = `M${x(r[0].i).toFixed(1)} ${(mt + ih).toFixed(1)} ` +
-        r.map(p => `L${x(p.i).toFixed(1)} ${y(p.avg).toFixed(1)}`).join(' ') +
-        ` L${x(r[r.length - 1].i).toFixed(1)} ${(mt + ih).toFixed(1)} Z`;
-      svg.appendChild(svgNS('path', { d: area, fill: 'var(--series-1-wash)', stroke: 'none' }));
-      svg.appendChild(svgNS('path', { d, fill: 'none', stroke: 'var(--series-1)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  data.forEach((d, i) => {
+    const cx = ml + i * band + band / 2;
+    if (d.n > 0) {
+      const bh = Math.max(3, ih * (d.n / max));
+      const r = Math.min(4, bh);
+      svg.appendChild(svgNS('path', {
+        d: `M${(cx - bw / 2).toFixed(1)} ${mt + ih} V${(mt + ih - bh + r).toFixed(1)} a${r} ${r} 0 0 1 ${r} -${r} H${(cx + bw / 2 - r).toFixed(1)} a${r} ${r} 0 0 1 ${r} ${r} V${mt + ih} Z`,
+        fill: f.color,
+      }));
     }
-    r.forEach(p => {
-      svg.appendChild(svgNS('circle', { cx: x(p.i), cy: y(p.avg), r: 4, fill: 'var(--series-1)', stroke: 'var(--surface)', 'stroke-width': 2 }));
+    if (i % 3 === 0 || i === hours.length - 1) {
+      const t = svgNS('text', { x: cx, y: H - 8, 'text-anchor': 'middle', class: 'tick' });
+      t.textContent = hourLabel(d.h); svg.appendChild(t);
+    }
+  });
+
+  // label the busiest hour and nothing else
+  const peak = data.reduce((x, z) => (z.n > x.n ? z : x));
+  if (peak.n > 0) {
+    const t = svgNS('text', {
+      x: ml + idx[peak.h] * band + band / 2, y: y(peak.n) - 6,
+      'text-anchor': 'middle', class: 'vlabel',
     });
-  });
-
-  // label only the best and worst hour
-  const best = have.reduce((a, b) => (b.avg > a.avg ? b : a));
-  const worst = have.reduce((a, b) => (b.avg < a.avg ? b : a));
-  [[best, -10], [worst, 18]].forEach(([p, dy]) => {
-    if (best === worst) return;
-    const i = hours.indexOf(p.h);
-    const anchor = i === 0 ? 'start' : i === hours.length - 1 ? 'end' : 'middle';
-    const t = svgNS('text', { x: x(i), y: y(p.avg) + dy, 'text-anchor': anchor, class: 'vlabel' });
-    t.textContent = p.avg.toFixed(1); svg.appendChild(t);
-  });
-
-  // crosshair + tooltip
-  const cross = svgNS('line', { y1: mt, y2: mt + ih, stroke: 'var(--axis)', 'stroke-width': 1, opacity: 0 });
-  svg.appendChild(cross);
-  const hit = svgNS('rect', { x: ml, y: mt, width: iw, height: ih, fill: 'transparent' });
-  svg.appendChild(hit);
+    t.textContent = peak.n; svg.appendChild(t);
+  }
   host.appendChild(svg);
-  const tip = tipLayer(host);
 
+  const tip = tipLayer(host);
   const at = ev => {
     const r = svg.getBoundingClientRect();
     const px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / r.width * W;
-    let bi = 0, bd = Infinity;
-    hours.forEach((h, i) => { const d = Math.abs(x(i) - px); if (d < bd) { bd = d; bi = i; } });
-    const p = pts[bi];
-    cross.setAttribute('x1', x(bi)); cross.setAttribute('x2', x(bi)); cross.setAttribute('opacity', 1);
-    tip.show(x(bi) / W * r.width, (p.avg === null ? mt + ih / 2 : y(p.avg)) / H * r.height,
-      p.avg === null
-        ? `<b>${hourLabelLong(p.h)}</b><br>never logged`
-        : `<b>${hourLabelLong(p.h)}</b><br>${p.avg.toFixed(1)} · ${MOOD_WORDS[Math.round(p.avg)]}<br>${p.n} log${p.n === 1 ? '' : 's'}`);
+    const i = Math.max(0, Math.min(hours.length - 1, Math.floor((px - ml) / band)));
+    const d = data[i];
+    tip.show((ml + i * band + band / 2) / W * r.width, (d.n ? y(d.n) : mt + ih) / H * r.height,
+      `<b>${hourLabelLong(d.h)}</b><br>${d.n === 0 ? 'never' : `${d.n} time${d.n === 1 ? '' : 's'}`}`);
   };
-  wireTip(svg, at, () => { cross.setAttribute('opacity', 0); tip.hide(); });
+  wireTip(svg, at, tip.hide);
 
-  // table view
   const tbl = el('table', { class: 'data' });
-  tbl.innerHTML = '<thead><tr><th>Hour</th><th>Average</th><th>Logs</th></tr></thead><tbody>' +
-    pts.map(p => `<tr><td>${hourLabelLong(p.h)}</td><td>${p.avg === null ? '–' : p.avg.toFixed(1)}</td><td>${p.n}</td></tr>`).join('') +
-    '</tbody>';
-  const holder = $('#hourTable');
+  tbl.innerHTML = `<thead><tr><th>Hour</th><th>${esc(f.name)}</th></tr></thead><tbody>` +
+    data.map(d => `<tr><td>${hourLabelLong(d.h)}</td><td>${d.n}</td></tr>`).join('') + '</tbody>';
   holder.innerHTML = ''; holder.appendChild(tbl);
 }
 
-/* ---- B. last 7 days (diverging heatmap) ---- */
+/* ---- B. the last 7 days, one square an hour ---- */
 function renderHeat() {
-  const host = $('#heatViz');
+  const host = $('#heatViz'), holder = $('#heatTable');
   const days = [];
   for (let i = 6; i >= 0; i--) days.push(addDays(startOfDay(new Date()), -i));
   const hours = awakeHours();
+  const at = (d, h) => store.entries[slotKey(new Date(d.getFullYear(), d.getMonth(), d.getDate(), h))];
 
-  const any = days.some(d => hours.some(h => store.entries[slotKey(new Date(d.getFullYear(), d.getMonth(), d.getDate(), h))]));
-  const legend = $('#heatLegend');
-  legend.innerHTML = '';
-  if (!any) { emptyState(host, 'Nothing in the last 7 days yet.'); $('#heatTable').hidden = true; return; }
+  if (!days.some(d => hours.some(h => at(d, h)))) {
+    emptyState(host, 'Nothing in the last 7 days yet.');
+    holder.hidden = true;
+    return;
+  }
 
-  const lw = 34, cell = Math.max(10, Math.min(22, Math.floor((640 - lw - 8) / hours.length) - 2)), gap = 2;
-  const W = lw + hours.length * (cell + gap), rowH = cell + gap;
-  const H = 16 + days.length * rowH;
+  const lw = 34, gap = 2;
+  const cell = Math.max(12, Math.min(26, Math.floor((640 - lw - 8) / hours.length) - gap));
+  const rowH = cell + gap;
+  const W = lw + hours.length * (cell + gap), H = 16 + days.length * rowH;
 
   host.innerHTML = '';
-  const svg = svgNS('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Mood for every hour of the last seven days' });
-
+  const svg = svgNS('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'What you felt each hour of the last seven days' });
   hours.forEach((h, i) => {
     if (i % 3 !== 0) return;
     const t = svgNS('text', { x: lw + i * (cell + gap) + cell / 2, y: 9, 'text-anchor': 'middle', class: 'tick' });
     t.textContent = hourLabel(h); svg.appendChild(t);
   });
 
-  const tipData = [];
+  const cells = [];
   days.forEach((d, r) => {
     const yTop = 16 + r * rowH;
     const lab = svgNS('text', { x: 0, y: yTop + cell / 2 + 3.5, class: 'tick' });
     lab.textContent = sameDay(d, new Date()) ? 'today' : dayNames[d.getDay()].slice(0, 3).toLowerCase();
     svg.appendChild(lab);
+
     hours.forEach((h, i) => {
-      const k = slotKey(new Date(d.getFullYear(), d.getMonth(), d.getDate(), h));
-      const e = store.entries[k];
+      const e = at(d, h);
+      const f = e && BY_ID[(e.emotions || [])[0]];
       const cx = lw + i * (cell + gap);
-      const rect = svgNS('rect', {
+      svg.appendChild(svgNS('rect', {
         x: cx, y: yTop, width: cell, height: cell, rx: 3,
-        fill: e ? `var(--mood-${e.mood})` : 'none',
+        fill: f ? f.color : (e ? 'var(--axis)' : 'none'),
+        'fill-opacity': f ? 0.22 : 1,
         stroke: e ? 'none' : 'var(--grid)', 'stroke-width': e ? 0 : 1,
-      });
-      svg.appendChild(rect);
-      tipData.push({ rect, d, h, e, cx: cx + cell / 2, cy: yTop });
+      }));
+      // the glyph rides on top, so a square never carries meaning by color alone
+      if (f) {
+        const k = (cell * 0.62) / 24;
+        const g = svgNS('g', {
+          transform: `translate(${(cx + cell / 2 - 12 * k).toFixed(1)} ${(yTop + cell / 2 - 12 * k).toFixed(1)}) scale(${k.toFixed(3)})`,
+          fill: 'none', stroke: f.color, 'stroke-width': (2.6 / k).toFixed(2),
+          'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+        });
+        g.innerHTML = f.icon;
+        svg.appendChild(g);
+      }
+      cells.push({ d, h, e, cx: cx + cell / 2, cy: yTop });
     });
   });
   host.appendChild(svg);
+
   const tip = tipLayer(host);
   const pick = ev => {
     const r = svg.getBoundingClientRect();
     const px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) / r.width * W;
     const py = ((ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top) / r.height * H;
     let best = null, bd = Infinity;
-    tipData.forEach(c => {
+    cells.forEach(c => {
       const dx = c.cx - px, dy = (c.cy + cell / 2) - py, dist = dx * dx + dy * dy;
       if (dist < bd) { bd = dist; best = c; }
     });
     if (!best || bd > (cell * 1.6) ** 2) { tip.hide(); return; }
     const when = `${sameDay(best.d, new Date()) ? 'Today' : dayNames[best.d.getDay()]} ${hourLabel(best.h)}`;
+    const names = best.e ? (best.e.emotions || []).map(feelName) : [];
     tip.show(best.cx / W * r.width, best.cy / H * r.height,
-      best.e
-        ? `<b>${when}</b><br>${MOOD_WORDS[best.e.mood]}${best.e.emotions && best.e.emotions.length ? '<br>' + esc(best.e.emotions.map(feelName).join(', ')) : ''}`
-        : `<b>${when}</b><br>not logged`);
+      `<b>${when}</b><br>${best.e ? (names.length ? esc(names.join(', ')) : 'logged') : 'not logged'}`);
   };
   wireTip(svg, pick, tip.hide);
 
-  [1, 2, 3, 4, 5].forEach(m => {
-    legend.appendChild(el('span', { class: 'item', html: `<span class="sw" style="background:var(--mood-${m})"></span>${MOOD_WORDS[m]}` }));
-  });
-  legend.appendChild(el('span', { class: 'item', html: '<span class="sw" style="background:none;border:1px solid var(--axis)"></span>not logged' }));
-
   const tbl = el('table', { class: 'data' });
-  tbl.innerHTML = '<thead><tr><th>Day</th><th>Logged</th><th>Average</th></tr></thead><tbody>' +
+  tbl.innerHTML = '<thead><tr><th>Day</th><th>Logged</th><th>Most</th></tr></thead><tbody>' +
     days.map(d => {
-      const ms = hours.map(h => store.entries[slotKey(new Date(d.getFullYear(), d.getMonth(), d.getDate(), h))]).filter(Boolean).map(e => e.mood);
-      const a = average(ms);
-      return `<tr><td>${dayNames[d.getDay()].slice(0, 3)} ${monNames[d.getMonth()]} ${d.getDate()}</td><td>${ms.length}</td><td>${a === null ? '–' : a.toFixed(1)}</td></tr>`;
+      const es = hours.map(h => at(d, h)).filter(Boolean);
+      const c = {};
+      es.forEach(e => (e.emotions || []).forEach(id => { c[id] = (c[id] || 0) + 1; }));
+      const t = Object.entries(c).sort((x, z) => z[1] - x[1])[0];
+      return `<tr><td>${dayNames[d.getDay()].slice(0, 3)} ${monNames[d.getMonth()]} ${d.getDate()}</td>` +
+        `<td>${es.length}</td><td>${t ? esc(feelName(t[0])) : '–'}</td></tr>`;
     }).join('') + '</tbody>';
-  const holder = $('#heatTable');
   holder.innerHTML = ''; holder.appendChild(tbl);
 }
 
@@ -1474,12 +1419,12 @@ function exportJson() {
   download(`hourly-${dayKey(new Date())}.json`, JSON.stringify(store, null, 2), 'application/json');
 }
 function exportCsv() {
-  const rows = [['date', 'hour', 'mood', 'mood_word', 'feelings', 'note', 'filled_in_later']];
+  const rows = [['date', 'hour', 'feelings', 'note', 'filled_in_later']];
   Object.keys(store.entries).sort().forEach(k => {
     const e = store.entries[k];
     rows.push([
-      k.slice(0, 10), k.slice(11), e.mood, MOOD_WORDS[e.mood],
-      (e.emotions || []).map(feelName).join(' + '), (e.note || '').replace(/\r?\n/g, ' '), e.late ? 'yes' : 'no',
+      k.slice(0, 10), k.slice(11), (e.emotions || []).map(feelName).join(' + '),
+      (e.note || '').replace(/\r?\n/g, ' '), e.late ? 'yes' : 'no',
     ]);
   });
   const csv = rows.map(r => r.map(c => {
@@ -1505,7 +1450,7 @@ function renderAll() {
   if (tab === 'now') { renderNow(); renderCatchup(); renderProgress(); }
   else { renderCatchup(); }
   if (tab === 'today') renderToday();
-  if (tab === 'patterns') { renderTiles(); renderHourChart(); renderHeat(); renderEmotions(); renderSettings(); }
+  if (tab === 'patterns') { renderTiles(); renderEmotions(); renderWhenChart(); renderHeat(); renderSettings(); }
 }
 
 function boot() {

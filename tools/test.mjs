@@ -56,17 +56,16 @@ const ALWAYS = { wake: 0, bed: 0, notify: false };        // wake === bed means 
 const DAYTIME = { wake: 8, bed: 23, notify: false };      // 15 awake hours
 
 function seedHistory() {
-  // five days of plausible history: mornings duller, evenings brighter
+  // five days of plausible history: rough mornings, busy afternoons, easier nights
   const entries = {};
   for (let back = 1; back <= 5; back++) {
     const day = new Date(Date.now() - back * 864e5);
-    for (let h = 8; h <= 22; h += 2) {
+    for (const [h, feelings] of [[8, ['sad', 'anxious']], [10, ['sad', 'anxious']],
+      [12, ['stressed', 'fine']], [14, ['stressed', 'fine']], [16, ['stressed', 'fine']],
+      [18, ['happy', 'grateful']], [20, ['happy', 'grateful']], [22, ['happy', 'grateful']]]) {
       const d = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h);
       entries[key(d)] = {
-        mood: Math.max(1, Math.min(5, Math.round(2 + (h - 8) / 5))),
-        emotions: h < 12 ? ['sad', 'anxious'] : ['happy', 'grateful'],
-        note: h === 14 ? 'test note' : '',
-        at: d.getTime(), late: false,
+        emotions: feelings, note: h === 14 ? 'test note' : '', at: d.getTime(), late: false,
       };
     }
   }
@@ -79,7 +78,7 @@ function seedHours(hours) {
     const day = new Date(Date.now() - back * 864e5);
     for (const h of hours) {
       const d = new Date(day.getFullYear(), day.getMonth(), day.getDate(), h);
-      entries[key(d)] = { mood: 3, emotions: ['fine'], note: '', at: d.getTime(), late: false };
+      entries[key(d)] = { emotions: ['fine'], note: '', at: d.getTime(), late: false };
     }
   }
   return entries;
@@ -107,12 +106,17 @@ async function done(page) { const c = page.__ctx; await page.close(); if (c) awa
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const read = page => page.evaluate(() => JSON.parse(localStorage.getItem('hourly.v1') || '{}'));
 const picked = page => page.$$eval('.feel[aria-pressed="true"]', els => els.map(e => e.dataset.id));
+
 // Centre the target first: a plain tap() parks an element at the bottom edge of
 // the viewport, where the fixed tab bar can swallow the touch.
 async function tap(page, sel) {
   await page.$eval(sel, e => e.scrollIntoView({ block: 'center', behavior: 'instant' }));
   await wait(70);
   await page.tap(sel);
+}
+async function logNow(page, ids) {
+  for (const id of ids) await tap(page, `.feel[data-id="${id}"]`);
+  await tap(page, '#checkinCard .btn');
 }
 
 /* ---------- the run ---------- */
@@ -128,13 +132,13 @@ try {
     await page.goto(base, { waitUntil: 'networkidle0' });
     eq('asks about this exact moment', await page.$eval('#checkinCard h2', e => e.textContent), 'How do you feel right now?');
     ok('and says so in as many words', (await page.$eval('.askline', e => e.textContent)).includes('not how the whole hour went'));
-    eq('five moods to pick from', (await page.$$('.mood')).length, 5);
+    eq('no rating scale anywhere', (await page.$$('.mood, .moods')).length, 0);
     ok('log button starts disabled', await page.$eval('#checkinCard .btn', b => b.disabled));
     await done(page);
   }
 
   /* 2. the feelings themselves */
-  console.log('\nseventeen feelings');
+  console.log('\neighteen feelings');
   {
     const page = await newPage(browser, { state: { entries: {}, settings: ALWAYS } });
     await page.goto(base, { waitUntil: 'networkidle0' });
@@ -142,46 +146,54 @@ try {
       id: e.dataset.id,
       name: e.querySelector('.nm').textContent,
       color: e.style.getPropertyValue('--fc').trim(),
-      marks: e.querySelectorAll('svg.glyph path, svg.glyph circle, svg.glyph ellipse').length,
+      marks: e.querySelectorAll('svg.glyph path, svg.glyph circle, svg.glyph ellipse, svg.glyph rect').length,
       hasInfo: !!e.querySelector('.info'),
     })));
-    eq('seventeen of them', tiles.length, 17);
+    eq('eighteen of them', tiles.length, 18);
     ok('every one has a glyph', tiles.every(t => t.marks > 0));
     ok('every one has a color', tiles.every(t => /^#[0-9a-f]{6}$/i.test(t.color)));
-    ok('no two share a color', new Set(tiles.map(t => t.color)).size === 17);
+    eq('no two share a color', new Set(tiles.map(t => t.color)).size, 18);
     ok('every one has an info button', tiles.every(t => t.hasInfo));
     const names = tiles.map(t => t.name);
-    const wanted = ['Not in control', 'Fine', 'Happy', 'Sad', 'Anxious', 'Angry', 'Excited',
+    const wanted = ['Not in control', 'Fine', 'Happy', 'Sad', 'Anxious', 'Stressed', 'Angry', 'Excited',
       'Irritable', 'Hopeful', 'Grateful', 'Confident', 'Social', 'Anti social',
       'Smart', 'Dumb', 'Ugly', 'Beautiful'];
-    ok('the whole requested list is there', wanted.every(n => names.includes(n)),
+    ok('the whole list is there, stressed included', wanted.every(n => names.includes(n)),
       wanted.filter(n => !names.includes(n)).join(', '));
+
+    const icons = await page.evaluate(() => Object.fromEntries(FEELINGS.map(f => [f.id, f.icon])));
+    eq('angry has eyes under the brows', (icons.angry.match(/fill="currentColor"/g) || []).length, 2);
+    ok('irritable is a storm cloud', icons.irritable.includes('a3.2 3.2 0 0 1 .5-6.3'));
+    ok('excited took the arrow', icons.excited.includes('M4 19.4h16'));
+    ok('confident took the sparkle', icons.confident.includes('M11 3.4l1.6 4.6'));
+    ok('stressed has its own glyph', !!icons.stressed && icons.stressed !== icons.anxious);
     await done(page);
   }
 
-  /* 3. two at most */
-  console.log('\npick up to two');
+  /* 3. two at most, and at least one */
+  console.log('\npick one or two');
   {
     const page = await newPage(browser, { state: { entries: {}, settings: ALWAYS } });
     await page.goto(base, { waitUntil: 'networkidle0' });
     ok('says the limit up front', (await page.$eval('.capline', e => e.textContent)).includes('up to two'));
     await tap(page, '.feel[data-id="happy"]');
     eq('one picked', (await picked(page)).length, 1);
+    ok('which is enough to log', !(await page.$eval('#checkinCard .btn', b => b.disabled)));
     await tap(page, '.feel[data-id="grateful"]');
     eq('two picked', (await picked(page)).length, 2);
-    eq('the rest go dim', (await page.$$('.feel[data-blocked="1"]')).length, 15);
+    eq('the rest go dim', (await page.$$('.feel[data-blocked="1"]')).length, 16);
     await tap(page, '.feel[data-id="angry"]');
     eq('a third is refused', (await picked(page)).length, 2);
     ok('and it says why', (await page.$eval('.capline', e => e.textContent)).includes('Two is the most'));
     await tap(page, '.feel[data-id="happy"]');
     eq('letting one go frees a slot', (await picked(page)).length, 1);
-    await tap(page, '.feel[data-id="angry"]');
+    await tap(page, '.feel[data-id="stressed"]');
     const ids = await picked(page);
-    ok('and the swap sticks', ids.includes('angry') && ids.includes('grateful'), ids.join(','));
-    await tap(page, '.mood[data-m="3"]');
+    ok('and the swap sticks', ids.includes('stressed') && ids.includes('grateful'), ids.join(','));
     await tap(page, '#checkinCard .btn');
     const e = Object.values((await read(page)).entries)[0];
-    ok('both feelings saved', e.emotions.length === 2 && e.emotions.includes('angry'));
+    ok('both feelings saved', e.emotions.length === 2 && e.emotions.includes('stressed'));
+    ok('and nothing else is recorded', !('mood' in e), Object.keys(e).join(','));
     await done(page);
   }
 
@@ -216,11 +228,18 @@ try {
       ok(`${c.id}: framed as the moment, not a verdict`,
         /moment/i.test(c.what) && /(not a fact|isn't a measurement|rather than a fact|not a measurement)/i.test(c.what));
     }
-    await tap(page, '.feel[data-id="hopeful"] .info');
+    // every feeling has a real description and two neighbours that exist
+    const bad = await page.evaluate(() => FEELINGS
+      .filter(f => !f.what || f.what.length < 40 || !f.related.every(r => FEELINGS.some(x => x.id === r)))
+      .map(f => f.id));
+    ok('all eighteen describe themselves, with neighbours that exist', bad.length === 0, bad.join(', '));
+
+    await tap(page, '.feel[data-id="stressed"] .info');
     await wait(280);
+    ok('stressed has its own entry', (await page.$eval('#sheet .what', e => e.textContent)).includes('more demand than you have resources for'));
     await tap(page, '#sheet .btn');
     await wait(320);
-    ok('you can pick it straight from the sheet', (await picked(page)).includes('hopeful'));
+    ok('you can pick it straight from the sheet', (await picked(page)).includes('stressed'));
     await done(page);
   }
 
@@ -229,14 +248,14 @@ try {
   {
     const now = new Date();
     const state = { entries: {}, settings: ALWAYS };
-    state.entries[key(now)] = { mood: 3, emotions: [], note: '', at: Date.now(), late: false };
+    state.entries[key(now)] = { emotions: ['fine'], note: '', at: Date.now(), late: false };
     const page = await newPage(browser, { state });
     await page.goto(base, { waitUntil: 'networkidle0' });
     const card = await page.$eval('#checkinCard', e => e.textContent);
     ok('this hour shows as answered', card.includes('logged'));
     ok('the next hour is named but shut', /check-in opens in/.test(card));
     ok('and it says why', card.includes("can't answer it early"));
-    eq('no picker is on screen', (await page.$$('#checkinCard .mood')).length, 0);
+    eq('no picker is on screen', (await page.$$('#checkinCard .feel')).length, 0);
 
     const label = h => { const t = h % 12 === 0 ? 12 : h % 12; return `${t}${h < 12 ? 'am' : 'pm'}`; };
     const nextLabel = label((now.getHours() + 1) % 24);
@@ -263,15 +282,14 @@ try {
     const ask = await page.$eval('.askline', e => e.textContent);
     ok('says you should be asleep', ask.includes('meant to be asleep'));
     ok('nothing is being demanded', ask.includes("nothing's due"));
-    eq('but the picker is still there', (await page.$$('.feel')).length, 17);
+    eq('but the picker is still there', (await page.$$('.feel')).length, 18);
     ok('no missed hours are held against you', await page.$eval('#catchupCard', e => e.hidden));
     await page.tap('nav.tabs button[data-tab="today"]');
     const label = x => { const t = x % 12 === 0 ? 12 : x % 12; return `${t}${x < 12 ? 'am' : 'pm'}`; };
     const rows = await page.$$eval('#timeline .when', els => els.map(e => e.textContent));
     ok('sleeping hours are off the timeline', !rows.includes(label(h)), rows.join(','));
     await page.tap('nav.tabs button[data-tab="now"]');
-    await tap(page, '.mood[data-m="4"]');
-    await tap(page, '#checkinCard .btn');
+    await logNow(page, ['fine']);
     eq('a 3am log is still allowed', Object.keys((await read(page)).entries).length, 1);
     await done(page);
   }
@@ -283,8 +301,8 @@ try {
     await page.goto(base, { waitUntil: 'networkidle0' });
     await page.tap('nav.tabs button[data-tab="patterns"]');
     eq('the window wraps midnight', await page.$eval('#windowSub', e => e.textContent), "8 check-ins a day · none while you're asleep");
-    await tap(page, '[data-numbers="hourTable"]');
-    const hours = await page.$$eval('#hourTable tbody tr td:first-child', els => els.map(e => e.textContent));
+    await tap(page, '[data-numbers="whenTable"]');
+    const hours = await page.$$eval('#whenTable tbody tr td:first-child', els => els.map(e => e.textContent));
     eq('eight hours on the chart', hours.length, 8);
     eq('starting at wake-up', hours[0], '10:00 PM');
     eq('running through to bed', hours[hours.length - 1], '5:00 AM');
@@ -308,14 +326,11 @@ try {
   {
     const page = await newPage(browser, { state: { entries: {}, settings: ALWAYS } });
     await page.goto(base, { waitUntil: 'networkidle0' });
-    await tap(page, '.mood[data-m="2"]');
-    await tap(page, '.feel[data-id="anxious"]');
-    await tap(page, '#checkinCard .btn');
+    await logNow(page, ['anxious', 'stressed']);
     await page.reload({ waitUntil: 'networkidle0' });
     const card = await page.$eval('#checkinCard', e => e.textContent);
     ok('still logged after a reload', card.includes('logged'));
-    ok('shows the mood back', card.includes('low'));
-    ok('and the feeling back', card.includes('Anxious'));
+    ok('and reads both feelings back', card.includes('Anxious') && card.includes('Stressed'));
     await done(page);
   }
 
@@ -325,7 +340,7 @@ try {
     const now = new Date();
     const cur = key(now);
     const state = { entries: {}, settings: ALWAYS };
-    state.entries[cur] = { mood: 3, emotions: [], note: '', at: Date.now(), late: false };
+    state.entries[cur] = { emotions: ['fine'], note: '', at: Date.now(), late: false };
     const page = await newPage(browser, { state });
     await page.goto(base, { waitUntil: 'networkidle0' });
     ok('catch-up card is showing', !(await page.$eval('#catchupCard', e => e.hidden)));
@@ -335,8 +350,7 @@ try {
     await wait(450);                                   // it smooth-scrolls back to the top
     ok('asks about that hour instead', (await page.$eval('#checkinCard h2', e => e.textContent)).startsWith('How were you at'));
     ok('and allows a rough answer', (await page.$eval('.askline', e => e.textContent)).includes('near enough is fine'));
-    await tap(page, '.mood[data-m="5"]');
-    await tap(page, '#checkinCard .btn');
+    await logNow(page, ['sad']);
     const backfilled = Object.entries((await read(page)).entries).find(([k]) => k !== cur);
     ok('the backfilled hour saved', !!backfilled);
     ok('and is flagged as filled in later', backfilled[1].late === true);
@@ -348,16 +362,16 @@ try {
   {
     const now = new Date();
     const state = { entries: {}, settings: ALWAYS };
-    state.entries[key(now)] = { mood: 5, emotions: ['confident', 'beautiful'], note: 'shipped it', at: Date.now(), late: false };
+    state.entries[key(now)] = { emotions: ['confident', 'beautiful'], note: 'shipped it', at: Date.now(), late: false };
     const page = await newPage(browser, { state });
     await page.goto(base, { waitUntil: 'networkidle0' });
     await page.tap('nav.tabs button[data-tab="today"]');
     const text = await page.$eval('#timeline', e => e.textContent);
-    ok('the entry is on the timeline', text.includes('great'));
-    ok('with its feelings named', text.includes('Confident') && text.includes('Beautiful'));
-    ok('and drawn as glyphs', (await page.$$('#timeline svg.glyph')).length >= 2);
+    ok('the entry reads as its feelings', text.includes('Confident and Beautiful'));
+    ok('and is drawn as glyphs too', (await page.$$('#timeline svg.glyph')).length >= 2);
     ok('the note shows', text.includes('shipped it'));
     ok('unlogged hours invite a fill-in', text.includes('not logged'));
+    ok('the day summary counts hours', (await page.$eval('#daySummary', e => e.textContent)).includes('hours logged'));
     eq('one row per hour so far today', (await page.$$('#timeline li')).length, now.getHours() + 1);
     await done(page);
   }
@@ -368,19 +382,30 @@ try {
     const page = await newPage(browser, { state: { entries: seedHistory(), settings: DAYTIME } });
     await page.goto(base, { waitUntil: 'networkidle0' });
     await page.tap('nav.tabs button[data-tab="patterns"]');
-    ok('mood-by-hour chart drew', (await page.$$('#hourViz svg path')).length > 0);
-    ok('heatmap drew cells', (await page.$$('#heatViz svg rect')).length > 20);
-    ok('feelings chart drew bars', (await page.$$('#emoViz svg path')).length > 0);
-    ok('each feeling wears its own glyph', (await page.$$('#emoViz svg g')).length >= 4);
-    const labels = await page.$$eval('#emoViz svg text.tick', els => els.map(e => e.textContent));
-    ok('named, not just colored', labels.includes('Happy') || labels.includes('Grateful'), labels.join(','));
-    eq('heatmap has a legend', (await page.$$('#heatLegend .item')).length, 6);
-    const week = await page.$eval('#tWeek', e => e.textContent);
-    ok('7-day average is a number', /^[1-5]\.\d$/.test(week), `saw "${week}"`);
+
+    const todaySub = await page.$eval('#tTodaySub', e => e.textContent);   // only hours that have happened
+    ok("today's tile counts hours so far", /^of ([0-9]|1[0-5]) hours$/.test(todaySub), todaySub);
+    ok('the week tile names a feeling', ['Happy', 'Grateful', 'Stressed', 'Fine', 'Sad', 'Anxious']
+      .includes(await page.$eval('#tWeek', e => e.textContent)));
     ok('streak counted', +(await page.$eval('#tStreak', e => e.textContent)) >= 1);
-    await tap(page, '[data-numbers="hourTable"]');
-    ok('numbers table opens', !(await page.$eval('#hourTable', e => e.hidden)));
-    eq('a row per awake hour', (await page.$$('#hourTable tbody tr')).length, 15);
+
+    ok('the feelings bar chart drew', (await page.$$('#emoViz svg path')).length > 0);
+    ok('each bar wears its feeling’s glyph', (await page.$$('#emoViz svg g')).length >= 4);
+    const labels = await page.$$eval('#emoViz svg text.tick', els => els.map(e => e.textContent));
+    ok('named, not just colored', labels.includes('Happy') || labels.includes('Stressed'), labels.join(','));
+
+    const chips = await page.$$eval('#whenPick .fchip', els => els.map(e => e.textContent.trim()));
+    ok('the when-chart offers your top feelings', chips.length >= 2 && chips.length <= 6, chips.join(','));
+    const firstHead = await page.$eval('#whenTable th:last-child, #whenTable', e => e.textContent);
+    await tap(page, '#whenPick .fchip:nth-child(2)');
+    ok('picking another redraws it', (await page.$$eval('#whenPick .fchip[aria-pressed="true"]', e => e.length)) === 1);
+    ok('columns drew for it', (await page.$$('#whenViz svg path')).length > 0);
+    await tap(page, '[data-numbers="whenTable"]');
+    eq('a row per awake hour', (await page.$$('#whenTable tbody tr')).length, 15);
+    ok('the table names which feeling it counts', (await page.$eval('#whenTable th:last-child', e => e.textContent)).length > 2);
+
+    ok('heatmap drew cells', (await page.$$('#heatViz svg rect')).length > 20);
+    ok('and a glyph in every logged one', (await page.$$('#heatViz svg g')).length >= 20);
     const box = await page.$eval('#heatViz svg', e => {
       e.scrollIntoView({ block: 'center' });           // a tap can't land off-screen
       const r = e.getBoundingClientRect();
@@ -445,7 +470,7 @@ try {
     ok('service worker took over', await page.evaluate(() => navigator.serviceWorker.ready.then(r => !!r.active).catch(() => false)));
     await page.setOfflineMode(true);
     await page.reload({ waitUntil: 'domcontentloaded' });
-    eq('still loads with no network', (await page.$$('.mood')).length, 5);
+    eq('still loads with no network', (await page.$$('.feel')).length, 18);
     await page.setOfflineMode(false);
     await done(page);
   }
@@ -455,10 +480,10 @@ try {
   {
     const page = await newPage(browser, { state: { entries: seedHistory(), settings: DAYTIME } });
     await page.goto(base, { waitUntil: 'networkidle0' });
-    for (const tab of ['now', 'today', 'patterns']) {
-      await page.tap(`nav.tabs button[data-tab="${tab}"]`);
+    for (const t of ['now', 'today', 'patterns']) {
+      await page.tap(`nav.tabs button[data-tab="${t}"]`);
       const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-      ok(`${tab}: nothing spills off the side`, over <= 0, `${over}px of sideways scroll`);
+      ok(`${t}: nothing spills off the side`, over <= 0, `${over}px of sideways scroll`);
       const tiny = await page.evaluate(() => {
         const bad = [];
         document.querySelectorAll('button:not([hidden])').forEach(b => {
@@ -469,16 +494,18 @@ try {
         });
         return bad;
       });
-      ok(`${tab}: tap targets are big enough`, tiny.length === 0, tiny.join(', '));
+      ok(`${t}: tap targets are big enough`, tiny.length === 0, tiny.join(', '));
     }
     await page.tap('nav.tabs button[data-tab="now"]');
-    const moodBottom = await page.$eval('.moods', e => e.getBoundingClientRect().bottom);
-    ok('mood picker is above the fold', moodBottom < 852, `${Math.round(moodBottom)}px down`);
+    const gridTop = await page.$eval('.feelings', e => e.getBoundingClientRect().top);
+    ok('the feelings start above the fold', gridTop < 852, `${Math.round(gridTop)}px down`);
     await page.screenshot({ path: 'tools/shot-phone.png' });
-    await tap(page, '.feel[data-id="not-in-control"] .info');
+    await tap(page, '.feel[data-id="stressed"] .info');
     await wait(320);
     await page.screenshot({ path: 'tools/shot-sheet.png' });
     await page.tap('#sheetBg');
+    await wait(320);                                   // the backdrop blocks the tab bar until it's gone
+    ok('the sheet lets go of the screen', await page.$eval('#sheet', e => e.hidden || !e.classList.contains('on')));
     await page.tap('nav.tabs button[data-tab="patterns"]');
     await page.screenshot({ path: 'tools/shot-patterns.png', fullPage: true });
     await done(page);

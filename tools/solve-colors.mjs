@@ -9,7 +9,7 @@ const HUES = [
   ['excited', 25, 85], ['irritable', 352, 38], ['hopeful', 172, 60],
   ['grateful', 140, 45], ['confident', 195, 70], ['social', 336, 62],
   ['anti-social', 222, 22], ['smart', 243, 55], ['dumb', 30, 28],
-  ['ugly', 78, 40], ['beautiful', 315, 50],
+  ['ugly', 78, 40], ['beautiful', 315, 50], ['stressed', 294, 23],
 ];
 const hex2rgb = h => [1,3,5].map(i => parseInt(h.slice(i, i+2), 16));
 const lum = rgb => { const c = rgb.map(v => { v/=255; return v<=0.03928 ? v/12.92 : ((v+0.055)/1.055)**2.4; }); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; };

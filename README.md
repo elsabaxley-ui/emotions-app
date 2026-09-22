@@ -1,8 +1,9 @@
 # Hourly
 
 An app that asks how you feel *right now* — not how the hour went — and remembers
-the answer. One file, no build step, no server, no account. On a phone it installs
-to the home screen and works with the network off.
+the answer. You answer in feelings, not in numbers. One file, no build step, no
+server, no account. On a phone it installs to the home screen and works with the
+network off.
 
 Everything you log stays in `localStorage` on the device you logged it on. Nothing
 is uploaded anywhere, which also means nothing syncs between devices and clearing
@@ -36,15 +37,16 @@ in-the-moment data.
 
 ## The feelings
 
-Seventeen, each with its own color and glyph, in an order that doesn't sort them
+Eighteen, each with its own color and glyph, in an order that doesn't sort them
 into good ones and bad ones:
 
-> Not in control · Fine · Happy · Sad · Anxious · Angry · Excited · Irritable ·
-> Hopeful · Grateful · Confident · Social · Anti social · Smart · Dumb · Ugly ·
-> Beautiful
+> Not in control · Fine · Happy · Sad · Anxious · Stressed · Angry · Excited ·
+> Irritable · Hopeful · Grateful · Confident · Social · Anti social · Smart ·
+> Dumb · Ugly · Beautiful
 
-**Pick up to two.** Three would be a mood board; two is a feeling. When two are
-picked the rest dim, and tapping one of your two lets it go.
+**One or two, nothing else.** A feeling is the whole entry — there's no rating,
+no score, no 1-to-5. Three feelings would be a mood board; two is a feeling. When
+two are picked the rest dim, and tapping one of your two lets it go.
 
 **The ⓘ on each one** opens a flat description of what that state *is* and what it
 tends to come with — never whether it should be there. Anxiety and excitement are
@@ -72,25 +74,25 @@ but the picker is still there if you're up at 3am and want to log it.
 
 ## The rest of it
 
-**Now** — the current hour, five faces, the feelings grid, an optional note. Under
-it: the hours you missed and how much of today you've logged.
+**Now** — the current hour, the feelings grid, an optional note. Under it: the
+hours you missed and how much of today you've logged.
 
 **Today** — every hour in order with what you picked and anything you wrote. Tap an
 empty hour to fill it in, *edit* to change one. The arrows step back through days.
 
 **Patterns** —
 
-- **Mood by time of day** — every hour you've ever logged, averaged. This is the one
-  that tells you something: most people have a shape to their day and don't know
-  what it is. The line connects across a single unlogged hour but breaks across a
-  longer gap, so it never draws a shape there's no evidence for.
-- **The last 7 days** — one square per hour, low (red) through neutral (gray) to
-  high (blue). Hollow squares are hours you didn't log.
 - **What you feel most** — which feelings you actually reach for, each with its own
   glyph and color.
+- **When you feel it** — pick one of your most-logged feelings and see which hours it
+  turns up in. This is the one that tells you something: most people have a shape to
+  their day and don't know what it is. Anxious at 8am and never at 8pm is a fact
+  about your mornings.
+- **The last 7 days** — one square an hour, carrying that hour's glyph in its own
+  color. Hollow squares are hours you didn't log.
 
-Every chart has a **Numbers** button showing the same data as a plain table, so
-nothing is readable by color alone.
+Every chart has a **Numbers** button showing the same data as a plain table, and
+every colored mark carries its glyph, so nothing is ever readable by color alone.
 
 ## The hourly part
 
@@ -146,14 +148,14 @@ npm install          # puppeteer-core, for headless Chrome
 npm test
 ```
 
-111 checks on a 393×852 viewport driven by touch events rather than clicks: the
-two-feeling cap, the info sheet and its related links, the four judgment-shaped
+123 checks on a 393×852 viewport driven by touch events rather than clicks: the
+one-or-two rule, the info sheet and its related links, the four judgment-shaped
 feelings each stating they describe a moment and not a fact, the refusal to log
-ahead, sleep windows including one that crosses midnight, upgrading from the
-previous version's settings, backfilling, the charts and their table views, every
-feeling's color clearing 3:1 in both themes, the manifest and icons, the service
-worker, the app still loading with the network cut, and a sweep for anything
-smaller than a thumb or spilling off the side. Set `CHROME_PATH` if Chrome isn't in
+ahead, sleep windows including one that crosses midnight, upgrading from older
+saved settings, backfilling, the charts and their table views, every feeling's
+color clearing 3:1 in both themes, the manifest and icons, the service worker, the
+app still loading with the network cut, and a sweep for anything smaller than a
+thumb or spilling off the side. Set `CHROME_PATH` if Chrome isn't in
 the default macOS location.
 
 ## Deploying
