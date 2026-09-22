@@ -103,7 +103,8 @@ body {
   font-size: 16px;
   line-height: 1.45;
   min-height: 100vh;
-  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  /* clears the fixed tab bar with room to spare, so nothing ends up under it */
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
   overflow-x: hidden;
 }
 main { max-width: 640px; margin: 0 auto; padding: 16px 16px 8px; }
@@ -158,8 +159,57 @@ header.top .clock { font-size: 0.82rem; color: var(--muted); font-variant-numeri
 .mood[data-m="4"][aria-pressed="true"] { background: var(--mood-4); color: var(--mood-4-ink); }
 .mood[data-m="5"][aria-pressed="true"] { background: var(--mood-5); color: var(--mood-5-ink); }
 
-.grouplbl { font-size: 0.68rem; color: var(--muted); text-transform: lowercase; letter-spacing: 0.04em; margin: 10px 0 5px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ---------- the feelings grid ---------- */
+.askline { font-size: 0.84rem; color: var(--ink-2); margin: 3px 0 2px; }
+.feelings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.feel {
+  position: relative; background: none; border: 1px solid var(--border); border-radius: 12px;
+  padding: 13px 6px 10px; display: grid; gap: 5px; justify-items: center; align-content: center;
+  min-height: 82px; color: var(--fc);
+}
+.feel .nm { font-size: 0.7rem; line-height: 1.15; text-align: center; color: var(--ink-2); }
+.feel[aria-pressed="true"] { border-color: var(--fc); background: color-mix(in srgb, var(--fc) 15%, transparent); }
+.feel[aria-pressed="true"] .nm { color: var(--ink); font-weight: 600; }
+.feel[data-blocked="1"] { opacity: 0.38; }
+.feel:active { transform: scale(0.97); }
+.feel .info {
+  position: absolute; top: 0; right: 0; width: 32px; height: 32px;
+  display: grid; place-items: center; background: none; border: none; color: var(--muted);
+}
+.feel .info:hover { color: var(--ink-2); }
+:root[data-labels="off"] .feel .nm { display: none; }
+:root[data-labels="off"] .feel { min-height: 66px; }
+.capline { font-size: 0.76rem; color: var(--muted); margin-top: 9px; }
+.capline.warn { color: var(--ink); }
+
+/* ---------- the info sheet ---------- */
+.sheet-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 20;
+  opacity: 0; pointer-events: none; transition: opacity 0.15s;
+}
+.sheet-bg.on { opacity: 1; pointer-events: auto; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; max-width: 640px; margin: 0 auto;
+  background: var(--surface); border: 1px solid var(--border); border-bottom: none;
+  border-radius: 18px 18px 0 0; padding: 14px 18px calc(20px + env(safe-area-inset-bottom));
+  transform: translateY(101%); transition: transform 0.2s ease;
+  max-height: 82vh; overflow-y: auto;
+}
+.sheet.on { transform: none; }
+.sheet .grab { width: 38px; height: 4px; border-radius: 2px; background: var(--axis); margin: 0 auto 14px; }
+.sheet h4 { margin: 0; font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.sheet h4 .swatch { color: var(--fc); display: inline-flex; }
+.sheet .what { margin-top: 10px; font-size: 0.93rem; color: var(--ink-2); line-height: 1.52; }
+.sheet .rel { margin-top: 16px; font-size: 0.72rem; color: var(--muted); letter-spacing: 0.03em; }
+.sheet .rel-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.rel-item {
+  display: inline-flex; align-items: center; gap: 7px; background: none;
+  border: 1px solid var(--border); border-radius: 999px; padding: 0 12px; min-height: 36px;
+  font-size: 0.85rem; color: var(--ink-2);
+}
+.rel-item .swatch { color: var(--fc); display: inline-flex; }
 .chip {
   background: none; border: 1px solid var(--border); border-radius: 999px;
   padding: 6px 11px; font-size: 0.86rem; color: var(--ink-2); line-height: 1.2;
@@ -361,12 +411,16 @@ select {
     <div class="card">
       <h3 style="margin-bottom:4px">Settings</h3>
       <div class="settings-row">
-        <div><div class="lab">Hours you want to be asked</div><div class="sub" id="windowSub"></div></div>
+        <div><div class="lab">Awake from</div><div class="sub" id="windowSub"></div></div>
         <div class="row" style="gap:4px">
-          <select id="dayStart" aria-label="First hour"></select>
+          <select id="wakeSel" aria-label="The hour you wake up"></select>
           <span class="hint">to</span>
-          <select id="dayEnd" aria-label="Last hour"></select>
+          <select id="bedSel" aria-label="The hour you go to sleep"></select>
         </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="lab">Names under the icons</div><div class="sub">off leaves just the glyphs</div></div>
+        <button class="numbtn" id="labelsBtn">On</button>
       </div>
       <div class="settings-row">
         <div><div class="lab">Notify me on the hour</div><div class="sub" id="notifySub">only works while the app is open</div></div>
@@ -404,6 +458,9 @@ select {
   </div>
 </nav>
 
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden></div>
+
 <div class="sr" role="status" aria-live="polite" id="live"></div>
 
 <script>
@@ -416,14 +473,108 @@ const KEY = 'hourly.v1';
 const MOOD_WORDS = { 1: 'awful', 2: 'low', 3: 'okay', 4: 'good', 5: 'great' };
 const FACES = { 1: '\u{1F616}', 2: '\u{1F615}', 3: '\u{1F610}', 4: '\u{1F642}', 5: '\u{1F604}' };
 
-const EMOTIONS = [
-  { group: 'good', items: ['happy', 'calm', 'excited', 'proud', 'grateful', 'loved', 'focused'] },
-  { group: 'in between', items: ['tired', 'bored', 'meh', 'restless', 'surprised'] },
-  { group: 'hard', items: ['anxious', 'stressed', 'sad', 'angry', 'lonely', 'overwhelmed', 'embarrassed'] },
-];
-const ALL_EMOTIONS = EMOTIONS.flatMap(g => g.items);
+/* ============================================================
+   the feelings
+   Seventeen of them, in no order that implies good or bad. Each carries its
+   own color and glyph; the color is one hex that clears 3:1 on both the light
+   and the dark surface (tools/solve-colors.mjs), so identity survives a theme
+   switch. `what` is deliberately flat description — what the state IS, what it
+   tends to come with — and never whether it should be there.
+   ============================================================ */
+const MAX_PICKS = 2;
 
-const DEFAULTS = { dayStart: 8, dayEnd: 22, notify: false };
+const FEELINGS = [
+  { id: 'not-in-control', name: 'Not in control', color: '#9a60cd',
+    icon: '<rect x="3.6" y="3.6" width="16.8" height="16.8" rx="3.4"/><circle cx="8.4" cy="8.4" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.2" fill="currentColor" stroke="none"/>',
+    what: "The sense that what happens next is being decided by something other than you — events, other people, or your own reactions. It describes who or what is steering, not whether the situation is good or bad.",
+    related: ['anxious', 'irritable'] },
+
+  { id: 'fine', name: 'Fine', color: '#6c7d89',
+    icon: '<circle cx="12" cy="12" r="8.4"/><path d="M8.2 12h7.6"/>',
+    what: "Neither notably good nor bad. Usually what's there when nothing in particular stands out — a steady, unremarkable state rather than an absence of feeling.",
+    related: ['happy', 'hopeful'] },
+
+  { id: 'happy', name: 'Happy', color: '#99760c',
+    icon: '<circle cx="12" cy="12" r="8.4"/><path d="M8.6 13.6c.9 1.6 5.9 1.6 6.8 0"/><path d="M9.5 9.6v.9M14.5 9.6v.9"/>',
+    what: "A pleasant state, usually with some ease or lightness to it. It can attach to something specific or to nothing in particular.",
+    related: ['grateful', 'excited'] },
+
+  { id: 'sad', name: 'Sad', color: '#397ad5',
+    icon: '<circle cx="12" cy="12" r="8.4"/><path d="M8.6 15.4c.9-1.6 5.9-1.6 6.8 0"/><path d="M9.5 9.6v.9M14.5 9.6v.9"/>',
+    what: "A response to loss, disappointment, or something missing. Energy and movement usually drop, and it tends to arrive in waves rather than steadily.",
+    related: ['not-in-control', 'anti-social'] },
+
+  { id: 'anxious', name: 'Anxious', color: '#b257ba',
+    icon: '<path d="M3 12c1.2-4 2.4-4 3.6 0s2.4 4 3.6 0 2.4-4 3.6 0 2.4 4 3.6 0"/>',
+    what: "Unease about something that hasn't happened yet. It's often physical — fast heartbeat, tight chest, restlessness — and the body's version of it is nearly identical to excitement. The difference is whether you want the thing that's coming.",
+    related: ['not-in-control', 'irritable'] },
+
+  { id: 'angry', name: 'Angry', color: '#dc453a',
+    icon: '<circle cx="12" cy="12" r="8.4"/><path d="M8.4 9.2l2.6 1.3M15.6 9.2l-2.6 1.3"/><path d="M9.2 15h5.6"/>',
+    what: "A response to something that reads as unfair, blocked, or threatening. It usually has a target, and often comes with physical heat or tension.",
+    related: ['irritable', 'not-in-control'] },
+
+  { id: 'excited', name: 'Excited', color: '#c65c10',
+    icon: '<path d="M11 3.4l1.6 4.6 4.6 1.6-4.6 1.6L11 15.8l-1.6-4.6L4.8 9.6l4.6-1.6z"/><path d="M18.2 15.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/>',
+    what: "High energy aimed at something you're anticipating. Physically close to anxiety — the same fast heartbeat and restlessness — pointed at something wanted.",
+    related: ['hopeful', 'happy'] },
+
+  { id: 'irritable', name: 'Irritable', color: '#b8616c',
+    icon: '<path d="M3 15.6h3.4L8.2 9l2.6 8.4L13.4 6l1.9 7.6 1.3-2.6H21"/>',
+    what: "A lowered threshold for annoyance: small things get a bigger reaction than they normally would. Strongly tied to tiredness, hunger, pain, and noise.",
+    related: ['angry', 'anxious'] },
+
+  { id: 'hopeful', name: 'Hopeful', color: '#22897b',
+    icon: '<path d="M3.6 19h16.8"/><path d="M7.6 19a4.4 4.4 0 0 1 8.8 0"/><path d="M12 5.2v2.2M6.1 8.2l1.6 1.6M17.9 8.2l-1.6 1.6M3.6 14.6h2M18.4 14.6h2"/>',
+    what: "Expecting that something you want might happen, while knowing it isn't settled. It holds the wanting and the uncertainty at the same time.",
+    related: ['excited', 'confident'] },
+
+  { id: 'grateful', name: 'Grateful', color: '#358b51',
+    icon: '<path d="M4.6 14a7.4 7.4 0 0 0 14.8 0"/><path d="M12 11.4s-3.1-2-3.1-4a1.9 1.9 0 0 1 3.1-1.2 1.9 1.9 0 0 1 3.1 1.2c0 2-3.1 4-3.1 4z"/>',
+    what: "Registering something you received, or something that went well, usually with another person involved in it.",
+    related: ['happy', 'hopeful'] },
+
+  { id: 'confident', name: 'Confident', color: '#1d85a7',
+    icon: '<path d="M4 19.4h16"/><path d="M12 16.4V5.8"/><path d="M8.2 9.6L12 5.8l3.8 3.8"/>',
+    what: "Expecting that you can handle what's in front of you. It's about the thing ahead of you rather than about your worth.",
+    related: ['smart', 'hopeful'] },
+
+  { id: 'social', name: 'Social', color: '#d4477f',
+    icon: '<circle cx="9" cy="8.8" r="2.8"/><circle cx="16.6" cy="10.6" r="2.2"/><path d="M3.6 19.4a5.4 5.4 0 0 1 10.8 0"/><path d="M16.2 19.4a4.2 4.2 0 0 1 4.2-3.8"/>',
+    what: "Wanting other people's company right now.",
+    related: ['excited', 'confident'] },
+
+  { id: 'anti-social', name: 'Anti social', color: '#6b7ba1',
+    icon: '<circle cx="9.2" cy="9" r="2.9"/><path d="M4 19.4a5.2 5.2 0 0 1 10.4 0"/><path d="M18.6 4.6v14.8"/>',
+    what: "Wanting to be away from other people, or finding company draining right now. It's about wanting distance, not about disliking anyone in particular.",
+    related: ['irritable', 'sad'] },
+
+  { id: 'smart', name: 'Smart', color: '#746fd5',
+    icon: '<path d="M9.4 17h5.2M10.3 19.6h3.4"/><path d="M12 3.6a5.6 5.6 0 0 0-3.2 10.2V17h6.4v-3.2A5.6 5.6 0 0 0 12 3.6z"/>',
+    what: "Feeling quick, clear, or capable with whatever you're thinking about. This describes how thinking feels at this moment — it isn't a measurement of intelligence, and the same person has hours of it and hours without it.",
+    related: ['confident', 'hopeful'] },
+
+  { id: 'dumb', name: 'Dumb', color: '#967554',
+    icon: '<path d="M9.4 17h5.2M10.3 19.6h3.4"/><path d="M12 3.6a5.6 5.6 0 0 0-3.2 10.2V17h6.4v-3.2A5.6 5.6 0 0 0 12 3.6z"/><path d="M6.8 18.2L17.2 5.4"/>',
+    what: "Feeling slow, foggy, or unable to get something that seems like it should be gettable. Like feeling smart, this is about the moment rather than a fact about you — tiredness, stress, and unfamiliar material all produce it.",
+    related: ['not-in-control', 'sad'] },
+
+  { id: 'ugly', name: 'Ugly', color: '#6d8439',
+    icon: '<circle cx="12" cy="9.6" r="6.2"/><path d="M12 15.8v3.4M9.6 20.4h4.8"/><path d="M12.6 3.8l-1.9 4 2.6 1.4-2 5.2"/>',
+    what: "Feeling dissatisfied with how you look right now. This records a feeling about your appearance at this moment, not a fact about how you look — it can change within the same day while nothing about your appearance has changed.",
+    related: ['sad', 'anti-social'] },
+
+  { id: 'beautiful', name: 'Beautiful', color: '#c44da6',
+    icon: '<circle cx="12" cy="9.6" r="6.2"/><path d="M12 15.8v3.4M9.6 20.4h4.8"/><path d="M19.4 3.2l.65 1.85 1.85.65-1.85.65-.65 1.85-.65-1.85-1.85-.65 1.85-.65z"/>',
+    what: "Feeling pleased with how you look right now. Like feeling ugly, it describes the moment rather than a fact about appearance, and it can shift from one hour to the next.",
+    related: ['confident', 'happy'] },
+];
+
+const BY_ID = Object.fromEntries(FEELINGS.map(f => [f.id, f]));
+const feelName = id => (BY_ID[id] || {}).name || id;
+const glyph = (f, size) => `<svg class="glyph" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${f.icon}</svg>`;
+
+const DEFAULTS = { wake: 7, bed: 23, notify: false, labels: true };
 
 let store = load();
 
@@ -432,9 +583,18 @@ function load() {
   try { raw = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
   let parsed = {};
   if (raw) { try { parsed = JSON.parse(raw) || {}; } catch (e) { parsed = {}; } }
+  const settings = Object.assign({}, DEFAULTS, parsed.settings || {});
+  // v1 kept a plain start/end window; carry it over to wake-up and bedtime
+  if (settings.wake === undefined || (parsed.settings || {}).dayStart !== undefined) {
+    if ((parsed.settings || {}).dayStart !== undefined) {
+      settings.wake = parsed.settings.dayStart;
+      settings.bed = (parsed.settings.dayEnd + 1) % 24;
+    }
+  }
+  delete settings.dayStart; delete settings.dayEnd;
   return {
     entries: (parsed.entries && typeof parsed.entries === 'object') ? parsed.entries : {},
-    settings: Object.assign({}, DEFAULTS, parsed.settings || {}),
+    settings,
   };
 }
 function save() {
@@ -469,20 +629,34 @@ function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDat
 function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
 const sameDay = (a, b) => dayKey(a) === dayKey(b);
 
-function inWindow(h) {
-  const { dayStart, dayEnd } = store.settings;
-  return h >= dayStart && h <= dayEnd;
+/**
+ * `wake` is the hour you get up, `bed` the hour you go to sleep, and the window
+ * is allowed to cross midnight — a 2am bedtime is a real bedtime. Nothing is
+ * asked for, counted missed, or held against you while you're meant to be
+ * asleep; you can still log in the small hours if you're up.
+ */
+function isAwake(h) {
+  const { wake, bed } = store.settings;
+  if (wake === bed) return true;
+  return wake < bed ? (h >= wake && h < bed) : (h >= wake || h < bed);
 }
-/** Every slot key for a date that sits inside the waking window and is not in the future. */
-function slotsForDay(date) {
-  const now = new Date();
+/** The awake hours in the order you live them, starting at wake-up. */
+function awakeHours() {
   const out = [];
-  for (let h = store.settings.dayStart; h <= store.settings.dayEnd; h++) {
-    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate(), h);
-    if (d > now) break;
-    out.push(slotKey(d));
+  for (let i = 0; i < 24; i++) {
+    const h = (store.settings.wake + i) % 24;
+    if (!isAwake(h)) break;
+    out.push(h);
   }
   return out;
+}
+/** Every awake slot on a calendar date that has already happened, in clock order. */
+function slotsForDay(date) {
+  const now = new Date();
+  return awakeHours().slice().sort((a, b) => a - b)
+    .map(h => new Date(date.getFullYear(), date.getMonth(), date.getDate(), h))
+    .filter(d => d <= now)
+    .map(slotKey);
 }
 /** Unlogged in-window slots from the last 12 hours, oldest first, excluding the current hour. */
 function missedSlots() {
@@ -491,7 +665,7 @@ function missedSlots() {
   for (let back = 12; back >= 1; back--) {
     const d = new Date(now.getTime() - back * 3600e3);
     d.setMinutes(0, 0, 0);
-    if (!inWindow(d.getHours())) continue;
+    if (!isAwake(d.getHours())) continue;
     const k = slotKey(d);
     if (!store.entries[k]) out.push(k);
   }
@@ -544,32 +718,44 @@ function renderNow() {
   const isCurrent = editing === cur;
   const existing = store.entries[editing];
   const d = slotDate(editing);
+  const asleep = !isAwake(now.getHours());
 
   if (existing && isCurrent && !card.dataset.reopen) {
-    // already logged this hour — show it back, offer the next step
-    const next = new Date(now.getTime() + 3600e3); next.setMinutes(0, 0, 0);
-    card.appendChild(el('p', { class: 'slotline', text: `${hourLabelLong(d.getHours())} — logged` }));
+    // this hour is answered — show it back, and say plainly why there's nothing
+    // to do yet. The next hour is not answerable early on purpose.
+    card.appendChild(el('p', { class: 'slotline', text: `${hourLabelLong(d.getHours())} \u00b7 logged` }));
     card.appendChild(el('h2', { text: `${FACES[existing.mood]}  ${MOOD_WORDS[existing.mood]}` }));
-    if (existing.emotions && existing.emotions.length)
-      card.appendChild(el('p', { class: 'hint', style: 'margin-top:2px', text: existing.emotions.join(' · ') }));
-    if (existing.note)
-      card.appendChild(el('p', { class: 'note', style: 'margin-top:8px;font-size:0.88rem', text: existing.note }));
-    const wait = inWindow(next.getHours())
-      ? `Next check-in ${hourLabel(next.getHours())} — in ${countdownText()}`
-      : `That's your last one today. See you ${hourLabel(store.settings.dayStart)} tomorrow.`;
-    card.appendChild(el('p', { class: 'hint', style: 'margin-top:12px', text: wait }));
-    const again = el('button', { class: 'btn ghost slim', text: 'Change it' });
+    if (existing.emotions && existing.emotions.length) card.appendChild(feelingRow(existing.emotions));
+    if (existing.note) card.appendChild(el('p', { style: 'margin-top:9px;font-size:0.88rem;color:var(--ink-2);white-space:pre-wrap', text: existing.note }));
+
+    const next = new Date(now.getTime() + 3600e3); next.setMinutes(0, 0, 0);
+    card.appendChild(el('p', {
+      class: 'hint', style: 'margin-top:14px',
+      text: isAwake(next.getHours())
+        ? `The ${hourLabel(next.getHours())} check-in opens in ${countdownText()}. You can't answer it early \u2014 it's for how you are then, not now.`
+        : `That's the last one before bed. Next up: ${hourLabel(store.settings.wake)} tomorrow.`,
+    }));
+    const again = el('button', { class: 'btn ghost slim', text: 'Change this hour' });
     again.onclick = () => { card.dataset.reopen = '1'; beginEdit(cur); renderNow(); };
     card.appendChild(again);
     return;
   }
 
-  // the picker
-  const when = isCurrent
-    ? `${hourLabelLong(d.getHours())} — right now`
-    : `${sameDay(d, now) ? 'Today' : dayNames[d.getDay()]} at ${hourLabelLong(d.getHours())}`;
-  card.appendChild(el('p', { class: 'slotline', text: when }));
-  card.appendChild(el('h2', { text: isCurrent ? 'How are you?' : 'How were you?' }));
+  /* ---- the ask ---- */
+  if (isCurrent) {
+    card.appendChild(el('p', { class: 'slotline', text: `${hourLabelLong(d.getHours())} \u00b7 right now` }));
+    card.appendChild(el('h2', { text: 'How do you feel right now?' }));
+    card.appendChild(el('p', {
+      class: 'askline',
+      text: asleep
+        ? "You're meant to be asleep, so nothing's due \u2014 but if you're up, log it."
+        : 'This exact moment, as you opened the app \u2014 not how the whole hour went.',
+    }));
+  } else {
+    card.appendChild(el('p', { class: 'slotline', text: `${sameDay(d, now) ? 'Today' : dayNames[d.getDay()]} \u00b7 ${hourLabelLong(d.getHours())}` }));
+    card.appendChild(el('h2', { text: `How were you at ${hourLabel(d.getHours())}?` }));
+    card.appendChild(el('p', { class: 'askline', text: "You missed this one, so near enough is fine." }));
+  }
 
   const moods = el('div', { class: 'moods' });
   for (let m = 1; m <= 5; m++) {
@@ -577,26 +763,63 @@ function renderNow() {
       el('span', { class: 'face', text: FACES[m], 'aria-hidden': 'true' }),
       el('span', { class: 'lbl', text: MOOD_WORDS[m] }),
     ]);
-    b.onclick = () => { draft.mood = m; renderNow(); };
+    b.onclick = () => {
+      draft.mood = m;
+      // update in place rather than re-render, so a half-typed note keeps focus
+      moods.querySelectorAll('.mood').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.m === m)));
+      submit.disabled = false;
+    };
     moods.appendChild(b);
   }
   card.appendChild(moods);
 
-  EMOTIONS.forEach(g => {
-    card.appendChild(el('p', { class: 'grouplbl', text: g.group }));
-    const wrap = el('div', { class: 'chips' });
-    g.items.forEach(name => {
-      const on = draft.emotions.includes(name);
-      const c = el('button', { class: 'chip', 'aria-pressed': String(on), text: name });
-      c.onclick = () => {
-        const i = draft.emotions.indexOf(name);
-        if (i < 0) draft.emotions.push(name); else draft.emotions.splice(i, 1);
-        c.setAttribute('aria-pressed', String(i < 0));
-      };
-      wrap.appendChild(c);
+  /* the feelings themselves */
+  const grid = el('div', { class: 'feelings' });
+  const cap = el('p', { class: 'capline' });
+  const syncCap = () => {
+    const n = draft.emotions.length;
+    cap.textContent = n === 0 ? 'Pick up to two.'
+      : n < MAX_PICKS ? 'You can pick one more.'
+      : 'Two is the most \u2014 tap one to let it go.';
+    grid.querySelectorAll('.feel').forEach(t => {
+      const on = draft.emotions.includes(t.dataset.id);
+      t.setAttribute('aria-pressed', String(on));
+      if (!on && n >= MAX_PICKS) t.setAttribute('data-blocked', '1');
+      else t.removeAttribute('data-blocked');
     });
-    card.appendChild(wrap);
+  };
+
+  FEELINGS.forEach(f => {
+    const tile = el('button', {
+      class: 'feel', 'data-id': f.id, 'aria-pressed': 'false',
+      'aria-label': f.name, style: `--fc:${f.color}`,
+    }, [
+      el('span', { html: glyph(f, 27), style: 'display:flex' }),
+      el('span', { class: 'nm', text: f.name }),
+    ]);
+    tile.onclick = ev => {
+      if (ev.target.closest('.info')) return;
+      const i = draft.emotions.indexOf(f.id);
+      if (i >= 0) draft.emotions.splice(i, 1);
+      else if (draft.emotions.length >= MAX_PICKS) {
+        cap.classList.add('warn');
+        say('Two feelings is the maximum.');
+        setTimeout(() => cap.classList.remove('warn'), 1200);
+        return;
+      } else draft.emotions.push(f.id);
+      syncCap();
+    };
+    const info = el('button', {
+      class: 'info', 'aria-label': `What ${f.name.toLowerCase()} means`,
+      html: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11.2v5.4" stroke-linecap="round"/><circle cx="12" cy="7.9" r="1.05" fill="currentColor" stroke="none"/></svg>',
+    });
+    info.onclick = ev => { ev.stopPropagation(); openSheet(f.id); };
+    tile.appendChild(info);
+    grid.appendChild(tile);
   });
+  card.appendChild(grid);
+  card.appendChild(cap);
+  syncCap();
 
   if (noteOpen) {
     const ta = el('textarea', { placeholder: "What's going on? (optional)", maxlength: '500' });
@@ -619,6 +842,73 @@ function renderNow() {
     cancel.onclick = () => { beginEdit(slotKey(new Date())); delete card.dataset.reopen; renderNow(); };
     card.appendChild(cancel);
   }
+}
+
+/** The little colored glyph-and-name row used wherever a logged entry is shown. */
+function feelingRow(ids, size) {
+  const row = el('div', { class: 'chips', style: 'margin-top:8px' });
+  ids.forEach(id => {
+    const f = BY_ID[id];
+    row.appendChild(el('span', {
+      class: 'rel-item', style: `--fc:${f ? f.color : 'var(--muted)'};pointer-events:none`,
+      html: (f ? `<span class="swatch">${glyph(f, size || 17)}</span>` : '') + `<span>${esc(f ? f.name : id)}</span>`,
+    }));
+  });
+  return row;
+}
+
+/* ---- what a feeling is: flat description, no verdict ---- */
+function openSheet(id) {
+  const f = BY_ID[id];
+  if (!f) return;
+  const sheet = $('#sheet');
+  sheet.hidden = false;
+  sheet.innerHTML = '';
+  sheet.appendChild(el('div', { class: 'grab' }));
+  sheet.appendChild(el('h4', {
+    id: 'sheetTitle', style: `--fc:${f.color}`,
+    html: `<span class="swatch">${glyph(f, 24)}</span><span>${esc(f.name)}</span>`,
+  }));
+  sheet.appendChild(el('p', { class: 'what', text: f.what }));
+
+  if (f.related && f.related.length) {
+    sheet.appendChild(el('p', { class: 'rel', text: 'RELATED' }));
+    const list = el('div', { class: 'rel-list' });
+    f.related.forEach(rid => {
+      const r = BY_ID[rid];
+      if (!r) return;
+      const b = el('button', {
+        class: 'rel-item', style: `--fc:${r.color}`,
+        html: `<span class="swatch">${glyph(r, 18)}</span><span>${esc(r.name)}</span>`,
+      });
+      b.onclick = () => openSheet(rid);
+      list.appendChild(b);
+    });
+    sheet.appendChild(list);
+  }
+
+  if (tab === 'now' && !store.entries[editing]) {
+    const already = draft.emotions.includes(id);
+    const pick = el('button', {
+      class: 'btn slim',
+      text: already ? 'Remove it' : draft.emotions.length >= MAX_PICKS ? 'You already have two' : 'Pick this one',
+    });
+    pick.disabled = !already && draft.emotions.length >= MAX_PICKS;
+    pick.onclick = () => {
+      const i = draft.emotions.indexOf(id);
+      if (i >= 0) draft.emotions.splice(i, 1); else draft.emotions.push(id);
+      closeSheet(); renderNow();
+    };
+    sheet.appendChild(pick);
+  }
+
+  requestAnimationFrame(() => { sheet.classList.add('on'); $('#sheetBg').classList.add('on'); });
+}
+function closeSheet() {
+  const sheet = $('#sheet');
+  sheet.classList.remove('on');
+  $('#sheetBg').classList.remove('on');
+  setTimeout(() => { if (!sheet.classList.contains('on')) sheet.hidden = true; }, 220);
 }
 
 function commit() {
@@ -652,7 +942,7 @@ function renderCatchup() {
   card.innerHTML = '';
   if (!missed.length) {
     card.hidden = true;
-    badge.hidden = !!store.entries[slotKey(new Date())] || !inWindow(new Date().getHours());
+    badge.hidden = !!store.entries[slotKey(new Date())] || !isAwake(new Date().getHours());
     return;
   }
   card.hidden = false;
@@ -717,11 +1007,10 @@ function renderToday() {
   const list = $('#timeline');
   list.innerHTML = '';
   const hours = [];
-  for (let h = store.settings.dayStart; h <= store.settings.dayEnd; h++) {
+  awakeHours().slice().sort((a, b) => a - b).forEach(h => {
     const d = new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h);
-    if (d > now) break;
-    hours.push(h);
-  }
+    if (d <= now) hours.push(h);
+  });
 
   const logged = hours.filter(h => store.entries[slotKey(new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h))]);
   const avg = average(logged.map(h => store.entries[slotKey(new Date(viewDay.getFullYear(), viewDay.getMonth(), viewDay.getDate(), h))].mood));
@@ -742,10 +1031,9 @@ function renderToday() {
       const txt = el('div');
       const line = el('div', { class: 'what' });
       line.appendChild(el('span', { text: MOOD_WORDS[e.mood] }));
-      if (e.emotions && e.emotions.length)
-        line.appendChild(el('span', { class: 'hint', text: ' — ' + e.emotions.join(', ') }));
       if (e.late) line.appendChild(el('span', { class: 'tag', text: 'filled in later' }));
       txt.appendChild(line);
+      if (e.emotions && e.emotions.length) txt.appendChild(feelingRow(e.emotions, 16));
       if (e.note) txt.appendChild(el('div', { class: 'note', text: e.note }));
       const edit = el('button', { class: 'fill', style: 'margin-top:3px', text: 'edit' });
       edit.onclick = () => { beginEdit(k); delete $('#checkinCard').dataset.reopen; setTab('now'); renderNow(); window.scrollTo({ top: 0 }); };
@@ -843,15 +1131,13 @@ function emptyState(host, msg) {
 /* ---- A. mood by hour of day (single-series line) ---- */
 function renderHourChart() {
   const host = $('#hourViz');
-  const { dayStart, dayEnd } = store.settings;
   const buckets = {};
   Object.keys(store.entries).forEach(k => {
     const h = slotDate(k).getHours();
-    if (!inWindow(h)) return;
+    if (!isAwake(h)) return;
     (buckets[h] = buckets[h] || []).push(store.entries[k].mood);
   });
-  const hours = [];
-  for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
+  const hours = awakeHours();
   const pts = hours.map(h => ({ h, n: (buckets[h] || []).length, avg: average(buckets[h] || []) }));
   const have = pts.filter(p => p.avg !== null);
   if (have.length < 2) {
@@ -955,11 +1241,9 @@ function renderHourChart() {
 /* ---- B. last 7 days (diverging heatmap) ---- */
 function renderHeat() {
   const host = $('#heatViz');
-  const { dayStart, dayEnd } = store.settings;
   const days = [];
   for (let i = 6; i >= 0; i--) days.push(addDays(startOfDay(new Date()), -i));
-  const hours = [];
-  for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
+  const hours = awakeHours();
 
   const any = days.some(d => hours.some(h => store.entries[slotKey(new Date(d.getFullYear(), d.getMonth(), d.getDate(), h))]));
   const legend = $('#heatLegend');
@@ -1013,7 +1297,7 @@ function renderHeat() {
     const when = `${sameDay(best.d, new Date()) ? 'Today' : dayNames[best.d.getDay()]} ${hourLabel(best.h)}`;
     tip.show(best.cx / W * r.width, best.cy / H * r.height,
       best.e
-        ? `<b>${when}</b><br>${MOOD_WORDS[best.e.mood]}${best.e.emotions && best.e.emotions.length ? '<br>' + esc(best.e.emotions.join(', ')) : ''}`
+        ? `<b>${when}</b><br>${MOOD_WORDS[best.e.mood]}${best.e.emotions && best.e.emotions.length ? '<br>' + esc(best.e.emotions.map(feelName).join(', ')) : ''}`
         : `<b>${when}</b><br>not logged`);
   };
   wireTip(svg, pick, tip.hide);
@@ -1046,7 +1330,7 @@ function renderEmotions() {
     return;
   }
 
-  const W = 640, lw = 108, mr = 40, bar = Math.min(24, 26), gap = 10;
+  const W = 640, lw = 116, mr = 40, bar = 22, gap = 10;
   const H = rows.length * (bar + gap);
   const max = rows[0][1];
   const iw = W - lw - mr;
@@ -1054,10 +1338,20 @@ function renderEmotions() {
   host.innerHTML = '';
   const svg = svgNS('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Most logged feelings' });
   const tipRects = [];
-  rows.forEach(([name, n], i) => {
+  rows.forEach(([id, n], i) => {
     const y = i * (bar + gap);
-    const t = svgNS('text', { x: lw - 8, y: y + bar / 2 + 4, 'text-anchor': 'end', class: 'tick' });
-    t.textContent = name; svg.appendChild(t);
+    const f = BY_ID[id];
+    if (f) {
+      const g = svgNS('g', {
+        transform: `translate(0 ${y + bar / 2 - 8}) scale(0.67)`,
+        fill: 'none', stroke: f.color, 'stroke-width': 2.7,
+        'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      });
+      g.innerHTML = f.icon;
+      svg.appendChild(g);
+    }
+    const t = svgNS('text', { x: 20, y: y + bar / 2 + 4, class: 'tick' });
+    t.textContent = f ? f.name : id; svg.appendChild(t);
     const w = Math.max(3, (n / max) * iw);
     // square at the baseline, 4px rounded data-end
     const r = 4;
@@ -1067,7 +1361,7 @@ function renderEmotions() {
     }));
     const v = svgNS('text', { x: lw + w + 7, y: y + bar / 2 + 4, class: 'vlabel' });
     v.textContent = n; svg.appendChild(v);
-    tipRects.push({ name, n, y, w });
+    tipRects.push({ name: f ? f.name : id, n, y, w });
   });
   svg.appendChild(svgNS('line', { x1: lw, x2: lw, y1: 0, y2: H - gap, stroke: 'var(--axis)', 'stroke-width': 1 }));
   host.appendChild(svg);
@@ -1087,7 +1381,7 @@ function renderEmotions() {
   const tbl = el('table', { class: 'data' });
   tbl.innerHTML = '<thead><tr><th>Feeling</th><th>Times</th></tr></thead><tbody>' +
     Object.entries(counts).sort((a, b) => b[1] - a[1])
-      .map(([n, c]) => `<tr><td>${esc(n)}</td><td>${c}</td></tr>`).join('') + '</tbody>';
+      .map(([n, c]) => `<tr><td>${esc(feelName(n))}</td><td>${c}</td></tr>`).join('') + '</tbody>';
   const holder = $('#emoTable');
   holder.innerHTML = ''; holder.appendChild(tbl);
 }
@@ -1096,26 +1390,25 @@ function renderEmotions() {
    settings
    ============================================================ */
 function fillHourSelects() {
-  const s = $('#dayStart'), e = $('#dayEnd');
-  s.innerHTML = ''; e.innerHTML = '';
+  const w = $('#wakeSel'), b = $('#bedSel');
+  w.innerHTML = ''; b.innerHTML = '';
   for (let h = 0; h <= 23; h++) {
-    s.appendChild(el('option', { value: h, text: hourLabel(h) }));
-    e.appendChild(el('option', { value: h, text: hourLabel(h) }));
+    w.appendChild(el('option', { value: h, text: hourLabel(h) }));
+    b.appendChild(el('option', { value: h, text: hourLabel(h) }));
   }
-  s.value = store.settings.dayStart;
-  e.value = store.settings.dayEnd;
+  w.value = store.settings.wake;
+  b.value = store.settings.bed;
   const onChange = () => {
-    let a = +s.value, b = +e.value;
-    if (b < a) { b = a; e.value = b; }
-    store.settings.dayStart = a; store.settings.dayEnd = b;
+    store.settings.wake = +w.value;
+    store.settings.bed = +b.value;
     save(); renderAll();
   };
-  s.onchange = onChange; e.onchange = onChange;
+  w.onchange = onChange; b.onchange = onChange;
 }
 function renderSettings() {
-  const { dayStart, dayEnd } = store.settings;
-  const n = dayEnd - dayStart + 1;
-  $('#windowSub').textContent = `${n} check-in${n === 1 ? '' : 's'} a day`;
+  $('#labelsBtn').textContent = store.settings.labels === false ? 'Off' : 'On';
+  const n = awakeHours().length;
+  $('#windowSub').textContent = `${n} check-in${n === 1 ? '' : 's'} a day \u00b7 none while you're asleep`;
   const btn = $('#notifyBtn');
   const sub = $('#notifySub');
   if (!('Notification' in window)) {
@@ -1157,7 +1450,7 @@ function maybeNotify() {
   if (!store.settings.notify) return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const now = new Date();
-  if (!inWindow(now.getHours())) return;
+  if (!isAwake(now.getHours())) return;
   if (store.entries[slotKey(now)]) return;
   try {
     new Notification('How are you feeling?', {
@@ -1186,7 +1479,7 @@ function exportCsv() {
     const e = store.entries[k];
     rows.push([
       k.slice(0, 10), k.slice(11), e.mood, MOOD_WORDS[e.mood],
-      (e.emotions || []).join(' '), (e.note || '').replace(/\r?\n/g, ' '), e.late ? 'yes' : 'no',
+      (e.emotions || []).map(feelName).join(' + '), (e.note || '').replace(/\r?\n/g, ' '), e.late ? 'yes' : 'no',
     ]);
   });
   const csv = rows.map(r => r.map(c => {
@@ -1261,6 +1554,26 @@ function boot() {
     save(); renderSettings();
     if (store.settings.notify) say('Notifications on.');
   };
+  const applyLabels = () => {
+    if (store.settings.labels === false) document.documentElement.setAttribute('data-labels', 'off');
+    else document.documentElement.removeAttribute('data-labels');
+  };
+  applyLabels();
+  $('#labelsBtn').onclick = () => {
+    store.settings.labels = store.settings.labels === false;
+    save(); applyLabels(); renderSettings();
+  };
+
+  // the info sheet closes on the backdrop, on Escape, or on a swipe down
+  $('#sheetBg').onclick = closeSheet;
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeSheet(); });
+  let touchY = null;
+  $('#sheet').addEventListener('touchstart', ev => { touchY = ev.touches[0].clientY; }, { passive: true });
+  $('#sheet').addEventListener('touchend', ev => {
+    if (touchY !== null && ev.changedTouches[0].clientY - touchY > 70 && $('#sheet').scrollTop <= 0) closeSheet();
+    touchY = null;
+  });
+
   $('#exportJson').onclick = exportJson;
   $('#exportCsv').onclick = exportCsv;
   $('#wipeBtn').onclick = () => {
@@ -1270,6 +1583,10 @@ function boot() {
     store.entries = {};
     save(); renderAll(); say('Everything erased.');
   };
+
+  // Writing straight back settles any migration from an older version, so the
+  // stored shape always matches what the running app believes.
+  save();
 
   beginEdit(slotKey(new Date()));
   setTab('now');
